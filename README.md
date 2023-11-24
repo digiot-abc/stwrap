@@ -89,3 +89,22 @@ public interface UserStripeLinkRepository<T> {
 | 7          | 登録済み | あり           | 決済時に新しい決済手段を登録する（複数のlink_id） | `token_id`, `plan_id` | `user_id`, `register`               | Primary設定されたlink_idが使用される |
 | 8          | 登録済み | なし           | 既存の決済手段を使用して決済する（単一のlink_id） | `payment_method_id`, `plan_id` | `link_id`                    |                                   |
 | 9          | 登録済み | なし           | 既存の決済手段を使用して決済する（複数のlink_id） | `payment_method_id`, `plan_id` | `user_id`                    | Primary設定されたlink_idが使用される |
+
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant System as System
+    participant Stwrap as Stwrap
+    participant DB
+    participant Stripe
+
+    User->>System: Requests payment process
+    System->>Stwrap: Passes userID
+    Stwrap->>DB: Retrieves payment details
+    DB-->>Stwrap: Payment details
+    Stwrap->>Stripe: Initiates payment
+    Stripe-->>Stwrap: Payment status
+    Stwrap-->>System: Confirms transaction
+    System-->>User: Transaction result
+```
