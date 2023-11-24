@@ -19,8 +19,7 @@ jobs:
           distribution: 'adopt'
 
       - name: Build and deploy
-        run: |
-          mvn -B clean install site site:deploy
+        run: GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} mvn -B -s settings.xml deploy -Dmaven.test.skip
 
       - name: Tag with version
         run: |
