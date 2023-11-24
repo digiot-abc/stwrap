@@ -1,0 +1,26 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Set up JDK
+        uses: actions/setup-java@v2
+        with:
+          java-version: 11
+
+      - name: Build and Deploy
+        run: |
+          mvn clean install
+          mvn deploy --settings settings.xml
+        env:
+          MAVEN_CLI_OPTS: "-Dmaven.repo.local=$GITHUB_WORKSPACE/.m2/repository"
