@@ -2,6 +2,7 @@ package digiot.stwrap.application;
 
 import com.stripe.exception.StripeException;
 import com.stripe.model.*;
+import com.stripe.param.InvoiceUpcomingParams;
 import digiot.stwrap.domain.model.StripeLinkedUser;
 import digiot.stwrap.domain.repository.StripeLinkedUserRepository;
 import digiot.stwrap.domain.repository.StripeSubscriptionRepository;
@@ -15,7 +16,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.time.Instant;
+import java.time.OffsetDateTime;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -35,9 +36,8 @@ public class SubscriptionServiceTest {
 
     @BeforeEach
     void setUp() throws StripeException {
-
         // SubscriptionServiceのインスタンスを生成
-        subscriptionService = new SubscriptionService<>(customerService, userLinkRepository, subscriptionRepository);
+        subscriptionService = new SubscriptionService<>(customerService, subscriptionRepository);
     }
 
     @AfterEach
@@ -54,8 +54,9 @@ public class SubscriptionServiceTest {
 
     @Test
     void createSubscriptionWithPaymentMethodId_successful() throws StripeException {
-        String userId = "service_user";
-        StripeLinkedUser<?> linkedUser = customerService.getOrCreateCustomer(userId);
+
+        String userId = "service_user1";
+        StripeLinkedUser<?> linkedUser = customerService.getOrCreate(userId);
         Product testProduct = StripeTestHelper.createTestProduct("Product");
         Plan testPlan = StripeTestHelper.createTestPlan(testProduct.getId(), 1000, "usd", "month");
         Token token = StripeTestHelper.createTestToken();
@@ -72,8 +73,9 @@ public class SubscriptionServiceTest {
 
     @Test
     void createSubscriptionWithToken_successful() throws StripeException {
-        String userId = "service_user";
-        StripeLinkedUser<String> linkedUser = customerService.getOrCreateCustomer(userId);
+
+        String userId = "service_user2";
+        StripeLinkedUser<String> linkedUser = customerService.getOrCreate(userId);
         Product testProduct = StripeTestHelper.createTestProduct("Product");
         Plan testPlan = StripeTestHelper.createTestPlan(testProduct.getId(), 1000, "usd", "month");
         String token = StripeTestHelper.createTestToken().getId();
@@ -87,41 +89,114 @@ public class SubscriptionServiceTest {
 
     @Test
     void applyCouponToSubscription_successful() throws StripeException {
-        Plan testPlan = StripeTestHelper.createTestPlan("Test Plan 3", 1000, "usd", "month");
-        Customer testCustomer = StripeTestHelper.createTestCustomer("test@example.com");
 
-        Product product = StripeTestHelper.createTestProduct("Product");
-        Plan plan = StripeTestHelper.createTestPlan(product.getId(), 1, "usd", "month");
+        // Create customer
+        String userId = "service_user3";
+        StripeLinkedUser<String> linkedUser = customerService.getOrCreate(userId);
 
-        String subscriptionId = StripeTestHelper.createSubscription(testCustomer.getId(), plan.getId()).getId();
+        // Create product
+        Product testProduct = StripeTestHelper.createTestProduct("Product");
+        Plan testPlan = StripeTestHelper.createTestPlan(testProduct.getId(), 1000, "usd", "month");
+
+        // Create subscription
+        Token token = StripeTestHelper.createTestToken();
         Coupon testCoupon = StripeTestHelper.createTestCoupon(10, "once"); // 10%オフのクーポン
 
-        Subscription subscription = subscriptionService.applyCouponToSubscription(subscriptionId, testCoupon.getId());
+        // Apply the coupon to the subscription
+        Subscription subscription = subscriptionService.createSubscriptionWithToken(linkedUser.getUserId(), testPlan.getId(), token.getId(), 1);
+        subscription = subscriptionService.applyCouponToSubscription(subscription.getId(), testCoupon.getId());
         assertNotNull(subscription);
+
+        // Retrieve the upcoming invoice for the subscription
+        InvoiceUpcomingParams invoiceParams = InvoiceUpcomingParams.builder()
+                .setCustomer(linkedUser.getStripeCustomerId())
+                .setSubscription(subscription.getId())
+                .build();
+        Invoice upcomingInvoice = Invoice.upcoming(invoiceParams);
+
+        // Calculate the expected amount (10% off the plan's amount)
+        long expectedAmountDue = (long) (testPlan.getAmount() - (testPlan.getAmount() * 0.10));
+
+        // Assert the next billing amount is 10% off
+        assertEquals(expectedAmountDue, upcomingInvoice.getAmountDue());
+        
+        System.out.println(upcomingInvoice.getTotal());
+        System.out.println(upcomingInvoice.getAmountDue());
     }
 
     @Test
     void cancelSubscriptionAtDate_successful() throws StripeException {
-        Plan testPlan = StripeTestHelper.createTestPlan("Test Plan 4", 1000, "usd", "month");
-        Customer testCustomer = StripeTestHelper.createTestCustomer("test@example.com");
-        Subscription testSubscription = StripeTestHelper.createSubscription(testCustomer.getId(), testPlan.getId());
-        String subscriptionId = testSubscription.getId();
-        Instant cancelAt = Instant.now().plusSeconds(3600); // 1時間後
 
-        Subscription subscription = subscriptionService.cancelSubscriptionAtDate(subscriptionId, cancelAt);
-        assertNotNull(subscription);
-        assertEquals(cancelAt.getEpochSecond(), subscription.getCancelAt());
+        String userId = "service_user4";
+        StripeLinkedUser<?> linkedUser = customerService.getOrCreate(userId);
+        Product testProduct = StripeTestHelper.createTestProduct("Product");
+        Plan testPlan = StripeTestHelper.createTestPlan(testProduct.getId(), 1000, "usd", "month");
+        Token token = StripeTestHelper.createTestToken();
+
+        String paymentMethodId = StripeTestHelper.attachTokenToCustomer(Customer.retrieve(linkedUser.getStripeCustomerId()), token).getId();
+
+        String planId = testPlan.getId();
+        int quantity = 1;
+
+        Subscription subscription = subscriptionService.createSubscriptionWithPaymentMethodId(userId, planId, paymentMethodId, quantity);
+        assertEquals("active", subscription.getStatus());
+
+        OffsetDateTime cancelAt = OffsetDateTime.now().plusMonths(1L);
+        subscription = subscriptionService.cancelSubscriptionAtDate(subscription.getId(), cancelAt);
+        assertEquals(cancelAt.toInstant().getEpochSecond(), subscription.getCancelAt());
+    }
+
+    @Test
+    void cancelSubscriptionMidTerm_successful() throws StripeException {
+
+        String userId = "service_user5";
+        StripeLinkedUser<?> linkedUser = customerService.getOrCreate(userId);
+        Product testProduct = StripeTestHelper.createTestProduct("Product");
+        Plan testPlan = StripeTestHelper.createTestPlan(testProduct.getId(), 1000, "usd", "month");
+        Token token = StripeTestHelper.createTestToken();
+
+        String paymentMethodId = StripeTestHelper.attachTokenToCustomer(Customer.retrieve(linkedUser.getStripeCustomerId()), token).getId();
+
+        String planId = testPlan.getId();
+        int quantity = 1;
+
+        Subscription subscription = subscriptionService.createSubscriptionWithPaymentMethodId(userId, planId, paymentMethodId, quantity);
+        assertEquals("active", subscription.getStatus());
+
+        OffsetDateTime now = OffsetDateTime.now();
+        OffsetDateTime cancelAt = now.plusDays(15);
+        subscription = subscriptionService.cancelSubscriptionAtDate(subscription.getId(), cancelAt);
+        assertEquals(cancelAt.toInstant().getEpochSecond(), subscription.getCancelAt());
+
+        // Retrieve the upcoming invoice for the subscription
+        InvoiceUpcomingParams invoiceParams = InvoiceUpcomingParams.builder()
+                .setCustomer(linkedUser.getStripeCustomerId())
+                .setSubscription(subscription.getId())
+                .build();
+        Invoice upcomingInvoice = Invoice.upcoming(invoiceParams);
+
+        System.out.println(upcomingInvoice.getTotal());
+        System.out.println(upcomingInvoice.getAmountDue());
     }
 
     @Test
     void cancelSubscriptionAtPeriodEnd_successful() throws StripeException {
-        Plan testPlan = StripeTestHelper.createTestPlan("Test Plan 5", 1000, "usd", "month");
-        Customer testCustomer = StripeTestHelper.createTestCustomer("test@example.com");
-        Subscription testSubscription = StripeTestHelper.createSubscription(testCustomer.getId(), testPlan.getId());
-        String subscriptionId = testSubscription.getId();
 
-        Subscription subscription = subscriptionService.cancelSubscriptionAtPeriodEnd(subscriptionId);
-        assertNotNull(subscription);
+        String userId = "service_user6";
+        StripeLinkedUser<?> linkedUser = customerService.getOrCreate(userId);
+        Product testProduct = StripeTestHelper.createTestProduct("Product");
+        Plan testPlan = StripeTestHelper.createTestPlan(testProduct.getId(), 1000, "usd", "month");
+        Token token = StripeTestHelper.createTestToken();
+
+        String paymentMethodId = StripeTestHelper.attachTokenToCustomer(Customer.retrieve(linkedUser.getStripeCustomerId()), token).getId();
+
+        String planId = testPlan.getId();
+        int quantity = 1;
+
+        Subscription subscription = subscriptionService.createSubscriptionWithPaymentMethodId(userId, planId, paymentMethodId, quantity);
+        assertEquals("active", subscription.getStatus());
+
+        subscription = subscriptionService.cancelSubscriptionAtPeriodEnd(subscription.getId());
         assertTrue(subscription.getCancelAtPeriodEnd());
     }
 }

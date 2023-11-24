@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS stripe_subscription
     subscription_id     VARCHAR(255) NOT NULL UNIQUE,
     plan_id             VARCHAR(255) NOT NULL,
     status              VARCHAR(255) NOT NULL,
+    deleted BOOLEAN DEFAULT FALSE,
     created_at          TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at          TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (stripe_linked_user_id) REFERENCES stripe_linked_user (id)

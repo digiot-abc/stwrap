@@ -4,7 +4,11 @@ import digiot.stwrap.domain.model.StripeSubscription;
 import digiot.stwrap.domain.repository.StripeSubscriptionRepository;
 
 import javax.sql.DataSource;
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -19,25 +23,18 @@ public class DefaultStripeSubscriptionRepository implements StripeSubscriptionRe
 
     @Override
     public Optional<StripeSubscription> findById(String id) {
-        String sql = "SELECT * FROM subscription WHERE id = ? AND deleted = FALSE";
+        String sql = "SELECT * FROM stripe_subscription WHERE id = ? AND deleted = FALSE";
 
         try (Connection conn = dataSource.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setString(1, id);
-            ResultSet rs = stmt.executeQuery();
-
-            if (rs.next()) {
-                StripeSubscription subscription = new StripeSubscription();
-                subscription.setId(rs.getString("id"));
-                subscription.setStripeLinkedUserId(rs.getString("stripe_linked_user_id"));
-                subscription.setSubscriptionId(rs.getString("subscription_id"));
-                subscription.setPlanId(rs.getString("plan_id"));
-                subscription.setStatus(rs.getString("status"));
-                return Optional.of(subscription);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return Optional.of(mapToStripeSubscription(rs));
+                }
             }
         } catch (SQLException e) {
-            // 例外処理を適切に行う
             throw new RuntimeException("Error finding subscription by ID", e);
         }
 
@@ -46,7 +43,7 @@ public class DefaultStripeSubscriptionRepository implements StripeSubscriptionRe
 
     @Override
     public Optional<StripeSubscription> findBySubscriptionId(String subscriptionId) {
-        String sql = "SELECT * FROM subscription WHERE subscription_id = ? AND deleted = FALSE";
+        String sql = "SELECT * FROM stripe_subscription WHERE subscription_id = ? AND deleted = FALSE";
 
         try (Connection conn = dataSource.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -55,17 +52,12 @@ public class DefaultStripeSubscriptionRepository implements StripeSubscriptionRe
             ResultSet rs = stmt.executeQuery();
 
             if (rs.next()) {
-                StripeSubscription subscription = new StripeSubscription();
-                subscription.setId(rs.getString("id"));
-                subscription.setStripeLinkedUserId(rs.getString("stripe_linked_user_id"));
-                subscription.setSubscriptionId(rs.getString("subscription_id"));
-                subscription.setPlanId(rs.getString("plan_id"));
-                subscription.setStatus(rs.getString("status"));
-                return Optional.of(subscription);
+                return Optional.of(mapToStripeSubscription(rs));
             }
         } catch (SQLException e) {
             // 例外処理を適切に行う
-            throw new RuntimeException("Error finding subscription by ID", e);
+//            throw new RuntimeException("Error finding subscription by ID", e);
+            e.printStackTrace();
         }
 
         return Optional.empty();
@@ -83,12 +75,7 @@ public class DefaultStripeSubscriptionRepository implements StripeSubscriptionRe
             ResultSet rs = stmt.executeQuery();
 
             while (rs.next()) {
-                StripeSubscription stripeSubscription = new StripeSubscription();
-                stripeSubscription.setId(rs.getString("id"));
-                stripeSubscription.setStripeLinkedUserId(rs.getString("stripe_linked_user_id"));
-                stripeSubscription.setSubscriptionId(rs.getString("subscription_id"));
-                stripeSubscription.setPlanId(rs.getString("plan_id"));
-                stripeSubscription.setStatus(rs.getString("status"));
+                StripeSubscription stripeSubscription = mapToStripeSubscription(rs);
                 stripeSubscriptions.add(stripeSubscription);
             }
         } catch (SQLException e) {
@@ -111,12 +98,7 @@ public class DefaultStripeSubscriptionRepository implements StripeSubscriptionRe
             ResultSet rs = stmt.executeQuery();
 
             while (rs.next()) {
-                StripeSubscription stripeSubscription = new StripeSubscription();
-                stripeSubscription.setId(rs.getString("id"));
-                stripeSubscription.setStripeLinkedUserId(rs.getString("stripe_linked_user_id"));
-                stripeSubscription.setSubscriptionId(rs.getString("subscription_id"));
-                stripeSubscription.setPlanId(rs.getString("plan_id"));
-                stripeSubscription.setStatus(rs.getString("status"));
+                StripeSubscription stripeSubscription = mapToStripeSubscription(rs);
                 stripeSubscriptions.add(stripeSubscription);
             }
         } catch (SQLException e) {
@@ -149,22 +131,25 @@ public class DefaultStripeSubscriptionRepository implements StripeSubscriptionRe
 
     @Override
     public int update(StripeSubscription stripeSubscription) {
-        String sql = "UPDATE stripe_subscription SET stripe_linked_user_id = ?, subscription_id = ?, plan_id = ?, status = ? WHERE id = ?";
+        String sql = "UPDATE stripe_subscription SET stripe_linked_user_id = ?, subscription_id = ?, plan_id = ?, status = ?, deleted = ? WHERE id = ?";
 
         try (Connection conn = dataSource.getConnection();
-            PreparedStatement stmt = conn.prepareStatement(sql)) {
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            stmt.setString(1, stripeSubscription.getStripeLinkedUserId());
+            // Ensure the order and the number of parameters match the SQL statement
+            stmt.setObject(1, stripeSubscription.getStripeLinkedUserId()); // Assuming stripeLinkedUserId is an object type
             stmt.setString(2, stripeSubscription.getSubscriptionId());
             stmt.setString(3, stripeSubscription.getPlanId());
             stmt.setString(4, stripeSubscription.getStatus());
-            stmt.setString(5, stripeSubscription.getId());
+            stmt.setBoolean(5, stripeSubscription.getDeleted()); // Update deleted status
+            stmt.setString(6, stripeSubscription.getId()); // The 'id' should be last to match the WHERE clause
 
             return stmt.executeUpdate();
         } catch (SQLException e) {
             throw new RuntimeException("Error updating subscription", e);
         }
     }
+
 
     @Override
     public int delete(StripeSubscription stripeSubscription) {
@@ -178,5 +163,18 @@ public class DefaultStripeSubscriptionRepository implements StripeSubscriptionRe
         } catch (SQLException e) {
             throw new RuntimeException("Error deleting subscription", e);
         }
+    }
+
+    private StripeSubscription mapToStripeSubscription(ResultSet rs) throws SQLException {
+        StripeSubscription subscription = new StripeSubscription();
+        subscription.setId(rs.getString("id"));
+        subscription.setStripeLinkedUserId(rs.getString("stripe_linked_user_id"));
+        subscription.setSubscriptionId(rs.getString("subscription_id"));
+        subscription.setPlanId(rs.getString("plan_id"));
+        subscription.setStatus(rs.getString("status"));
+        subscription.setDeleted(rs.getBoolean("deleted"));
+        subscription.setCreatedAt(rs.getObject("created_at", LocalDateTime.class));
+        subscription.setUpdatedAt(rs.getObject("updated_at", LocalDateTime.class));
+        return subscription;
     }
 }

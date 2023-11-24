@@ -11,6 +11,7 @@ public class StripeSubscription {
     private String subscriptionId;
     private String planId;
     private String status;
+    private Boolean deleted;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

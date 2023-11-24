@@ -1,6 +1,7 @@
-package digiot.stwrap.domain.model;
+package digiot.stwrap.domain.subscription;
 
 import de.huxhorn.sulky.ulid.ULID;
+import digiot.stwrap.domain.model.StripeSubscription;
 
 public class StripeSubscriptionFactory {
 

@@ -86,6 +86,7 @@ public class StripeTestHelper {
     public static Subscription createSubscription(String customerId, String planId) throws StripeException {
         SubscriptionCreateParams.Item item = SubscriptionCreateParams.Item.builder()
                 .setPlan(planId)
+                .setQuantity(1L)
                 .build();
 
         SubscriptionCreateParams params = SubscriptionCreateParams.builder()

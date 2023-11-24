@@ -5,13 +5,13 @@ import com.stripe.model.Subscription;
 import com.stripe.param.SubscriptionUpdateParams;
 import digiot.stwrap.domain.model.StripeLinkedUser;
 import digiot.stwrap.domain.model.StripeSubscription;
-import digiot.stwrap.domain.model.StripeSubscriptionFactory;
-import digiot.stwrap.domain.repository.StripeLinkedUserRepository;
 import digiot.stwrap.domain.repository.StripeSubscriptionRepository;
+import digiot.stwrap.domain.subscription.StripeSubscriptionFactory;
 import digiot.stwrap.domain.subscription.SubscriptionItemFactory;
 import lombok.AllArgsConstructor;
 
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -19,38 +19,8 @@ import java.util.Map;
 public class SubscriptionService<T> {
 
     private final CustomerService<T> customerService;
-    private final StripeLinkedUserRepository<T> linkedUserRepository;
     private final StripeSubscriptionRepository subscriptionRepository;
 
-    /**
-     * Creates a new subscription for a user in Stripe using an existing payment method ID.
-     *
-     * @param userId           The user ID from the client's system.
-     * @param planId           The ID of the subscription plan in Stripe.
-     * @param paymentMethodId  The ID of the payment method to be used for the subscription.
-     * @param quantity         The quantity of the subscription, typically 1.
-     * @return Subscription    The Stripe Subscription object that was created.
-     * @throws StripeException If there is an issue communicating with the Stripe API.
-     */
-    public Subscription createSubscriptionWithPaymentMethodId(T userId, String planId, String paymentMethodId, int quantity) throws StripeException {
-
-        StripeLinkedUser<T> linkedUser = customerService.getOrCreateCustomer(userId);
-
-        customerService.attachPaymentMethodToCustomer(linkedUser.getStripeCustomerId(), paymentMethodId);
-
-        Map<String, Object> subscriptionParams = new HashMap<>();
-        subscriptionParams.put("customer", linkedUser.getStripeCustomerId());
-        subscriptionParams.put("items", SubscriptionItemFactory.createSubscriptionItem(planId, quantity));
-        subscriptionParams.put("default_payment_method", paymentMethodId);
-
-        Subscription subscription = Subscription.create(subscriptionParams);
-        StripeSubscription stripeSubscription = new StripeSubscriptionFactory()
-                .create(linkedUser.getId(), subscription.getId(), planId, subscription.getStatus());
-        subscriptionRepository.insert(stripeSubscription);
-
-        return subscription;
-    }
-    
     /**
      * Creates a new subscription for a user with the specified plan and a new payment method token.
      *
@@ -67,6 +37,35 @@ public class SubscriptionService<T> {
     }
 
     /**
+     * Creates a new subscription for a user in Stripe using an existing payment method ID.
+     *
+     * @param userId          The user ID from the client's system.
+     * @param planId          The ID of the subscription plan in Stripe.
+     * @param paymentMethodId The ID of the payment method to be used for the subscription.
+     * @param quantity        The quantity of the subscription, typically 1.
+     * @return Subscription    The Stripe Subscription object that was created.
+     * @throws StripeException If there is an issue communicating with the Stripe API.
+     */
+    public Subscription createSubscriptionWithPaymentMethodId(T userId, String planId, String paymentMethodId, int quantity) throws StripeException {
+
+        StripeLinkedUser<T> linkedUser = customerService.getOrCreate(userId);
+
+        customerService.attachPaymentMethodToCustomer(linkedUser.getStripeCustomerId(), paymentMethodId);
+
+        Map<String, Object> subscriptionParams = new HashMap<>();
+        subscriptionParams.put("customer", linkedUser.getStripeCustomerId());
+        subscriptionParams.put("items", SubscriptionItemFactory.createSubscriptionItem(planId, quantity));
+        subscriptionParams.put("default_payment_method", paymentMethodId);
+
+        Subscription subscription = Subscription.create(subscriptionParams);
+        StripeSubscription stripeSubscription = new StripeSubscriptionFactory()
+                .create(linkedUser.getId(), subscription.getId(), planId, subscription.getStatus());
+        subscriptionRepository.insert(stripeSubscription);
+
+        return subscription;
+    }
+
+    /**
      * Applies a coupon code to an existing subscription in Stripe.
      *
      * @param subscriptionId The ID of the existing subscription in Stripe.
@@ -75,14 +74,13 @@ public class SubscriptionService<T> {
      * @throws StripeException If there is an issue communicating with the Stripe API.
      */
     public Subscription applyCouponToSubscription(String subscriptionId, String couponCode) throws StripeException {
-        Subscription subscription = Subscription.retrieve(subscriptionId);
 
-        SubscriptionUpdateParams params = SubscriptionUpdateParams.builder()
-                .setCoupon(couponCode)
-                .build();
+        Subscription subscription = Subscription.retrieve(subscriptionId);
+        SubscriptionUpdateParams params = SubscriptionUpdateParams.builder().setCoupon(couponCode).build();
 
         Subscription updatedSubscription = subscription.update(params);
         StripeSubscription foundStripeSubscription = subscriptionRepository.findBySubscriptionId(updatedSubscription.getId()).get();
+
         foundStripeSubscription.setStatus(updatedSubscription.getStatus());
         subscriptionRepository.update(foundStripeSubscription);
 
@@ -97,13 +95,13 @@ public class SubscriptionService<T> {
      * @return Subscription  The updated Stripe Subscription object.
      * @throws StripeException If there is an issue communicating with the Stripe API.
      */
-    public Subscription cancelSubscriptionAtDate(String subscriptionId, Instant cancelAt) throws StripeException {
-        Subscription subscription = Subscription.retrieve(subscriptionId);
+    public Subscription cancelSubscriptionAtDate(String subscriptionId, OffsetDateTime cancelAt) throws StripeException {
 
+        Instant instantCancelAt = cancelAt.toInstant();
+
+        Subscription subscription = Subscription.retrieve(subscriptionId);
         SubscriptionUpdateParams params = SubscriptionUpdateParams.builder()
-                .setCancelAtPeriodEnd(false)
-                .setCancelAt(cancelAt.getEpochSecond())
-                .build();
+                .setCancelAt(instantCancelAt.getEpochSecond()).build();
 
         Subscription updatedSubscription = subscription.update(params);
         StripeSubscription foundStripeSubscription = subscriptionRepository.findBySubscriptionId(updatedSubscription.getId()).get();
@@ -121,14 +119,13 @@ public class SubscriptionService<T> {
      * @throws StripeException If there is an issue communicating with the Stripe API.
      */
     public Subscription cancelSubscriptionAtPeriodEnd(String subscriptionId) throws StripeException {
+
         Subscription subscription = Subscription.retrieve(subscriptionId);
 
-        SubscriptionUpdateParams params = SubscriptionUpdateParams.builder()
-                .setCancelAtPeriodEnd(true)
-                .build();
+        SubscriptionUpdateParams params = SubscriptionUpdateParams.builder().setCancelAtPeriodEnd(true).build();
 
         Subscription updatedSubscription = subscription.update(params);
-         StripeSubscription foundStripeSubscription = subscriptionRepository.findBySubscriptionId(updatedSubscription.getId()).get();
+        StripeSubscription foundStripeSubscription = subscriptionRepository.findBySubscriptionId(updatedSubscription.getId()).get();
         foundStripeSubscription.setStatus(updatedSubscription.getStatus());
         subscriptionRepository.update(foundStripeSubscription);
 
