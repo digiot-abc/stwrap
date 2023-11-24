@@ -5,15 +5,12 @@ import com.stripe.model.*;
 import com.stripe.param.InvoiceUpcomingParams;
 import digiot.stwrap.domain.model.StripeLinkedUser;
 import digiot.stwrap.domain.repository.StripeLinkedUserRepository;
-import digiot.stwrap.domain.repository.StripeSubscriptionRepository;
 import digiot.stwrap.domain.repository.impl.DefaultStripeLinkedUserRepository;
-import digiot.stwrap.domain.repository.impl.DefaultStripeSubscriptionRepository;
 import digiot.stwrap.helper.StripeTestHelper;
 import digiot.stwrap.infrastructure.DataSourceProvider;
 import digiot.stwrap.infrastructure.StripeApiKeyInitializer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.OffsetDateTime;
@@ -22,22 +19,13 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class SubscriptionServiceTest {
 
-    private SubscriptionService<String> subscriptionService;
-
-    // リポジトリの実際のインスタンスを生成
     StripeLinkedUserRepository<String> userLinkRepository = new DefaultStripeLinkedUserRepository<>(DataSourceProvider.getDataSource());
-    StripeSubscriptionRepository subscriptionRepository = new DefaultStripeSubscriptionRepository(DataSourceProvider.getDataSource());
     CustomerService<String> customerService = new CustomerService<>(userLinkRepository);
+    SubscriptionService<String> subscriptionService = new SubscriptionService<>(customerService);
 
     @BeforeAll
     static void setUpAll() {
         StripeApiKeyInitializer.initialize();
-    }
-
-    @BeforeEach
-    void setUp() throws StripeException {
-        // SubscriptionServiceのインスタンスを生成
-        subscriptionService = new SubscriptionService<>(customerService, subscriptionRepository);
     }
 
     @AfterEach
@@ -56,7 +44,7 @@ public class SubscriptionServiceTest {
     void createSubscriptionWithPaymentMethodId_successful() throws StripeException {
 
         String userId = "service_user1";
-        StripeLinkedUser<?> linkedUser = customerService.getOrCreate(userId);
+        StripeLinkedUser<?> linkedUser = customerService.getOrCreateStripeLinkedUser(userId);
         Product testProduct = StripeTestHelper.createTestProduct("Product");
         Plan testPlan = StripeTestHelper.createTestPlan(testProduct.getId(), 1000, "usd", "month");
         Token token = StripeTestHelper.createTestToken();
@@ -75,7 +63,7 @@ public class SubscriptionServiceTest {
     void createSubscriptionWithToken_successful() throws StripeException {
 
         String userId = "service_user2";
-        StripeLinkedUser<String> linkedUser = customerService.getOrCreate(userId);
+        StripeLinkedUser<String> linkedUser = customerService.getOrCreateStripeLinkedUser(userId);
         Product testProduct = StripeTestHelper.createTestProduct("Product");
         Plan testPlan = StripeTestHelper.createTestPlan(testProduct.getId(), 1000, "usd", "month");
         String token = StripeTestHelper.createTestToken().getId();
@@ -92,7 +80,7 @@ public class SubscriptionServiceTest {
 
         // Create customer
         String userId = "service_user3";
-        StripeLinkedUser<String> linkedUser = customerService.getOrCreate(userId);
+        StripeLinkedUser<String> linkedUser = customerService.getOrCreateStripeLinkedUser(userId);
 
         // Create product
         Product testProduct = StripeTestHelper.createTestProduct("Product");
@@ -119,7 +107,7 @@ public class SubscriptionServiceTest {
 
         // Assert the next billing amount is 10% off
         assertEquals(expectedAmountDue, upcomingInvoice.getAmountDue());
-        
+
         System.out.println(upcomingInvoice.getTotal());
         System.out.println(upcomingInvoice.getAmountDue());
     }
@@ -128,7 +116,7 @@ public class SubscriptionServiceTest {
     void cancelSubscriptionAtDate_successful() throws StripeException {
 
         String userId = "service_user4";
-        StripeLinkedUser<?> linkedUser = customerService.getOrCreate(userId);
+        StripeLinkedUser<?> linkedUser = customerService.getOrCreateStripeLinkedUser(userId);
         Product testProduct = StripeTestHelper.createTestProduct("Product");
         Plan testPlan = StripeTestHelper.createTestPlan(testProduct.getId(), 1000, "usd", "month");
         Token token = StripeTestHelper.createTestToken();
@@ -150,7 +138,7 @@ public class SubscriptionServiceTest {
     void cancelSubscriptionMidTerm_successful() throws StripeException {
 
         String userId = "service_user5";
-        StripeLinkedUser<?> linkedUser = customerService.getOrCreate(userId);
+        StripeLinkedUser<?> linkedUser = customerService.getOrCreateStripeLinkedUser(userId);
         Product testProduct = StripeTestHelper.createTestProduct("Product");
         Plan testPlan = StripeTestHelper.createTestPlan(testProduct.getId(), 1000, "usd", "month");
         Token token = StripeTestHelper.createTestToken();
@@ -171,7 +159,6 @@ public class SubscriptionServiceTest {
         // Retrieve the upcoming invoice for the subscription
         InvoiceUpcomingParams invoiceParams = InvoiceUpcomingParams.builder()
                 .setCustomer(linkedUser.getStripeCustomerId())
-                .setSubscription(subscription.getId())
                 .build();
         Invoice upcomingInvoice = Invoice.upcoming(invoiceParams);
 
@@ -183,7 +170,7 @@ public class SubscriptionServiceTest {
     void cancelSubscriptionAtPeriodEnd_successful() throws StripeException {
 
         String userId = "service_user6";
-        StripeLinkedUser<?> linkedUser = customerService.getOrCreate(userId);
+        StripeLinkedUser<?> linkedUser = customerService.getOrCreateStripeLinkedUser(userId);
         Product testProduct = StripeTestHelper.createTestProduct("Product");
         Plan testPlan = StripeTestHelper.createTestPlan(testProduct.getId(), 1000, "usd", "month");
         Token token = StripeTestHelper.createTestToken();
@@ -198,5 +185,7 @@ public class SubscriptionServiceTest {
 
         subscription = subscriptionService.cancelSubscriptionAtPeriodEnd(subscription.getId());
         assertTrue(subscription.getCancelAtPeriodEnd());
+
+        System.out.println(subscription.getCancelAt());
     }
 }

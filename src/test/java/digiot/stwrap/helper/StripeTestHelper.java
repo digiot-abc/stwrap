@@ -27,15 +27,7 @@ public class StripeTestHelper {
         return customer;
     }
 
-    // テスト実施不可
     public static Token createTestToken() throws StripeException {
-//        Map<String, Object> cardParams = new HashMap<>();
-//        cardParams.put("number", "4242424242424242");
-//        cardParams.put("exp_month", 12);
-//        cardParams.put("exp_year", 2030);
-//        cardParams.put("cvc", "123");
-//        Map<String, Object> tokenParams = new HashMap<>();
-//        tokenParams.put("card", cardParams);
         return Token.retrieve("tok_visa");
     }
 

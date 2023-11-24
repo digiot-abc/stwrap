@@ -4,8 +4,8 @@ import com.stripe.exception.StripeException;
 import com.stripe.model.Customer;
 import com.stripe.model.PaymentMethod;
 import com.stripe.param.CustomerCreateParams;
-import com.stripe.param.CustomerUpdateParams;
 import com.stripe.param.PaymentMethodAttachParams;
+import com.stripe.param.PaymentMethodCreateParams;
 import digiot.stwrap.domain.customer.StripeLinkedUserFactory;
 import digiot.stwrap.domain.model.StripeLinkedUser;
 import digiot.stwrap.domain.repository.StripeLinkedUserRepository;
@@ -25,28 +25,52 @@ public class CustomerService<T> {
      * @return StripeLinkedUser The retrieved or newly created StripeLinkedUser.
      * @throws StripeException If there is an issue with the Stripe API call.
      */
-    public StripeLinkedUser<T> getOrCreate(T userId) throws StripeException {
-        
-        // DBからuserIdに対応するlinkを検索
+    public StripeLinkedUser<T> getOrCreateStripeLinkedUser(T userId) throws StripeException {
+        return getOrCreateStripeLinkedUser(userId, null);
+    }
+
+    /**
+     * Retrieves an existing StripeLinkedUser or creates a new one if it doesn't exist for the specified user.
+     *
+     * @param userId The unique identifier of the user within your system.
+     * @param email  The email address associated with the user for the Stripe Customer object.
+     * @return StripeLinkedUser The retrieved or newly created StripeLinkedUser.
+     * @throws StripeException If there is an issue with the Stripe API call.
+     */
+    public StripeLinkedUser<T> getOrCreateStripeLinkedUser(T userId, String email) throws StripeException {
+
         Optional<StripeLinkedUser<T>> link = userLinkRepository.findPrimaryByUserId(userId);
         
         if (link.isPresent()) {
-            // 既存のStripe Customerを取得
             return link.get();
         }
-        
-        // 新規のStripe Customerを作成
+
         CustomerCreateParams params = CustomerCreateParams.builder()
+                .setName(String.valueOf(userId))
+                .setEmail(email)
                 .setDescription("Customer for user ID: " + userId)
                 .build();
 
         Customer newCustomer = Customer.create(params);
 
-        StripeLinkedUserFactory<T> linkFactory = new StripeLinkedUserFactory<>();
-        StripeLinkedUser<T> newLink = linkFactory.create(userId, newCustomer.getId());
-        userLinkRepository.insert(newLink);
+        return linkStripeCustomer(userId, newCustomer);
+    }
 
-        return newLink;
+    /**
+     * Links a Stripe customer to an existing user.
+     *
+     * @param userId   The unique identifier of the user within your system.
+     * @param customer The Stripe Customer object to be linked to the user.
+     * @return StripeLinkedUser The newly created StripeLinkedUser representing the link.
+     * @throws StripeException If there is an issue with the Stripe API call.
+     */
+    public StripeLinkedUser<T> linkStripeCustomer(T userId, Customer customer) throws StripeException {
+
+        StripeLinkedUserFactory<T> linkFactory = new StripeLinkedUserFactory<>();
+        StripeLinkedUser<T> link = linkFactory.create(userId, customer.getId());
+        userLinkRepository.insert(link);
+
+        return link;
     }
 
     /**
@@ -54,25 +78,23 @@ public class CustomerService<T> {
      *
      * @param userId The ID of the user within your system.
      * @param token  The token representing the payment method to be added.
+     * @param type   The type of the payment method (e.g., PaymentMethodCreateParams.Type.CARD).
      * @return PaymentMethod The Stripe PaymentMethod object that was attached.
      * @throws StripeException If there is an issue with the Stripe API call.
      */
-    public PaymentMethod addPaymentMethodToCustomer(T userId, String token) throws StripeException {
+    public PaymentMethod addPaymentMethodToCustomer(T userId, String token, PaymentMethodCreateParams.Type type) throws StripeException {
 
-        StripeLinkedUser<T> linkedUser = getOrCreate(userId);
+        StripeLinkedUser<T> linkedUser = getOrCreateStripeLinkedUser(userId);
         Customer customer = Customer.retrieve(linkedUser.getStripeCustomerId());
 
-        // 顧客にトークンを紐付けて支払い方法を更新
-        CustomerUpdateParams customerUpdateParams = CustomerUpdateParams.builder()
-                .setSource(token)
+        PaymentMethodCreateParams paymentMethodCreateParams = PaymentMethodCreateParams.builder()
+                .setType(type)
+                .setCard(PaymentMethodCreateParams.Token.builder().setToken(token).build())
                 .build();
-        customer = customer.update(customerUpdateParams);
+        PaymentMethod paymentMethod = PaymentMethod.create(paymentMethodCreateParams);
+        attachPaymentMethodToCustomer(customer.getId(), paymentMethod.getId());
 
-        // 顧客に紐付けられたデフォルトの支払い方法IDを取得
-        String paymentMethodId = customer.getDefaultSource();
-
-        // Payment Methodオブジェクトの取得
-        return PaymentMethod.retrieve(paymentMethodId);
+        return PaymentMethod.retrieve(customer.getDefaultSource());
     }
 
     /**
@@ -102,5 +124,4 @@ public class CustomerService<T> {
         // Attach the Payment Method to the customer.
         paymentMethod.attach(attachParams);
     }
-
 }
