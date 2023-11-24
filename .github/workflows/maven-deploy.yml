@@ -19,7 +19,7 @@ jobs:
           distribution: 'adopt'
 
       - name: Build and deploy
-        run: GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} mvn -B -s settings.xml deploy -Dmaven.test.skip
+        run: GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} mvn -B -s .github/workflows/settings.xml deploy -Dmaven.test.skip
 
       - name: Tag with version
         run: |
