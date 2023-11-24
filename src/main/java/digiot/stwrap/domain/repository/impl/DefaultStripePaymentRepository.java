@@ -38,13 +38,13 @@ public class DefaultStripePaymentRepository implements StripePaymentRepository {
     }
 
     @Override
-    public List<StripePayment> findAllByStripeUserLinkId(String stripeUserLinkId) {
+    public List<StripePayment> findAllByStripeLinkedUserId(String StripeLinkedUserId) {
         List<StripePayment> payments = new ArrayList<>();
-        String sql = "SELECT * FROM stripe_payment WHERE stripe_user_link_id = ?";
+        String sql = "SELECT * FROM stripe_payment WHERE stripe_linked_user_id = ?";
 
         try (Connection conn = dataSource.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, stripeUserLinkId);
+            stmt.setString(1, StripeLinkedUserId);
 
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
@@ -60,11 +60,11 @@ public class DefaultStripePaymentRepository implements StripePaymentRepository {
 
     @Override
     public StripePayment create(StripePayment stripePayment) {
-        String sql = "INSERT INTO stripe_payment (stripe_user_link_id, stripe_charge_id, amount, currency, status) VALUES (?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO stripe_payment (stripe_linked_user_id, stripe_charge_id, amount, currency, status) VALUES (?, ?, ?, ?, ?)";
 
         try (Connection conn = dataSource.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            stmt.setString(1, stripePayment.getStripeUserLinkId());
+            stmt.setString(1, stripePayment.getStripeLinkedUserId());
             stmt.setString(2, stripePayment.getStripeChargeId());
             stmt.setBigDecimal(3, stripePayment.getAmount());
             stmt.setString(4, stripePayment.getCurrency());
@@ -112,7 +112,7 @@ public class DefaultStripePaymentRepository implements StripePaymentRepository {
     private StripePayment mapRowToStripePayment(ResultSet rs) throws SQLException {
         StripePayment payment = new StripePayment();
         payment.setId(rs.getString("id"));
-        payment.setStripeUserLinkId(rs.getString("stripe_user_link_id"));
+        payment.setStripeLinkedUserId(rs.getString("stripe_linked_user_id"));
         payment.setStripeChargeId(rs.getString("stripe_charge_id"));
         payment.setAmount(rs.getBigDecimal("amount"));
         payment.setCurrency(rs.getString("currency"));

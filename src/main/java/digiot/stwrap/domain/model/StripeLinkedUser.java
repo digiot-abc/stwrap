@@ -5,12 +5,13 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-public class StripeUserLink<T> {
+public class StripeLinkedUser<T> {
 
     private String id;
     private T userId;
     private String stripeCustomerId;
-    private boolean isDeleted;
+    private Boolean primary;
+    private Boolean deleted;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

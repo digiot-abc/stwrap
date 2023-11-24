@@ -2,10 +2,10 @@ package digiot.stwrap.domain.model;
 
 import de.huxhorn.sulky.ulid.ULID;
 
-public class StripeUserLinkFactory<T> {
+public class StripeLinkedUserFactory<T> {
 
-    public StripeUserLink<T> create(T userId, String stripeCustomerId) {
-        StripeUserLink<T> link = new StripeUserLink<>();
+    public StripeLinkedUser<T> create(T userId, String stripeCustomerId) {
+        StripeLinkedUser<T> link = new StripeLinkedUser<>();
         link.setId(new ULID().nextULID());
         link.setUserId(userId);
         link.setStripeCustomerId(stripeCustomerId);

@@ -38,23 +38,32 @@ public interface StripeSubscriptionRepository {
     /**
      * Finds all subscriptions associated with a specific Stripe user link ID.
      *
-     * @param stripeUserLinkId The identifier of the Stripe user link for which subscriptions are to be found.
+     * @param StripeLinkedUserId The identifier of the Stripe user link for which subscriptions are to be found.
      * @return A list of StripeSubscription objects associated with the Stripe user link ID. Returns an empty list if no subscriptions are found.
      */
-    List<StripeSubscription> findAllByStripeUserLinkId(String stripeUserLinkId);
-
+    List<StripeSubscription> findAllByStripeLinkedUserId(String StripeLinkedUserId);
+   
     /**
-     * Saves or updates a Stripe subscription.
+     * Inserts a new Stripe subscription into the repository.
      *
-     * @param stripeSubscription The StripeSubscription object to save or update.
-     * @return The saved or updated StripeSubscription object.
+     * @param stripeSubscription The StripeSubscription object to insert.
+     * @return The number of rows affected.
      */
-    StripeSubscription create(StripeSubscription stripeSubscription);
+    int insert(StripeSubscription stripeSubscription);
 
     /**
-     * Deletes a Stripe subscription.
+     * Updates an existing Stripe subscription in the repository.
+     *
+     * @param stripeSubscription The StripeSubscription object to update.
+     * @return The number of rows affected by the update.
+     */
+    int update(StripeSubscription stripeSubscription);
+
+    /**
+     * Deletes an existing Stripe subscription from the repository.
      *
      * @param stripeSubscription The StripeSubscription object to delete.
+     * @return The number of rows affected by the deletion.
      */
-    void delete(StripeSubscription stripeSubscription);
+    int delete(StripeSubscription stripeSubscription);
 }

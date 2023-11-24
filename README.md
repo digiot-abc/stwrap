@@ -13,7 +13,7 @@ CREATE TABLE user_stripe_link
     id                 VARCHAR(32) PRIMARY KEY,
     user_id            VARCHAR(255) NOT NULL,
     stripe_customer_id VARCHAR(255) NOT NULL,
-    is_deleted         BOOLEAN   DEFAULT FALSE,
+    deleted         BOOLEAN   DEFAULT FALSE,
     created_at         TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at         TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
@@ -55,7 +55,7 @@ public class UserStripeLinkEntity<T> {
 ユーザーとStripe顧客IDのリンクを管理するUserStripeLinkRepositoryインターフェイスも実装する必要があります。その一例を以下に示します。
 
 ```java
-import digiot.stwrap.domain.model.StripeUserLink;
+import digiot.stwrap.domain.model.StripeLinkedUser;
 import digiot.stwrap.domain.model.UserStripeLink;
 import digiot.stwrap.domain.model.UserStripeLinkEntity;
 
@@ -63,16 +63,29 @@ import java.util.List;
 
 public interface UserStripeLinkRepository<T> {
 
-    List<StripeUserLink<T>> findAllLinksByUserId(T userId);
+    List<StripeLinkedUser<T>> findAllLinksByUserId(T userId);
 
-    StripeUserLink<T> findLatestLinkByUserId(T userId);
+    StripeLinkedUser<T> findLatestLinkByUserId(T userId);
 
-    StripeUserLink<T> create(StripeUserLink<T> stripeUserLink);
+    StripeLinkedUser<T> create(StripeLinkedUser<T> StripeLinkedUser);
 
-    void update(StripeUserLink<T> link);
+    void update(StripeLinkedUser<T> link);
 
-    void delete(StripeUserLink<T> link);
+    void delete(StripeLinkedUser<T> link);
 }
 ```
 
 このインターフェイスは、ユーザーとStripeのリンクを管理するために必要な基本的なCRUD操作を定義しています。
+
+## 想定される決済手段
+| ケース番号 | 登録状況 | 決済手段の登録 | 決済時の行動                             | 必要なパラメータ (Stripe)   | 必要なパラメータ (本ライブラリ)         | 備考                              |
+|------------|----------|----------------|--------------------------------------|----------------------|-------------------------------|-----------------------------------|
+| 1          | 未登録   | あり           | 決済時に決済手段を登録する                 | `token_id`, `plan_id` | `user_id`, `register`                |                                   |
+| 2          | 未登録   | なし           | 決済手段のみ登録する                      | `token_id`           | `user_id`                          |                                   |
+| 3          | 未登録   | あり           | 決済時に既存の決済手段を指定する             | `payment_method_id`  | `user_id`, `register`                |                                   |
+| 4          | 登録済み | なし           | 決済手段のみ登録する（単一のlink_id）      | `token_id`           | `link_id`                          |                                   |
+| 5          | 登録済み | なし           | 決済手段のみ登録する（複数のlink_id）      | `token_id`           | `user_id`                          | Primary設定されたlink_idが使用される |
+| 6          | 登録済み | あり           | 決済時に新しい決済手段を登録する（単一のlink_id） | `token_id`, `plan_id` | `link_id`, `register`               |                                   |
+| 7          | 登録済み | あり           | 決済時に新しい決済手段を登録する（複数のlink_id） | `token_id`, `plan_id` | `user_id`, `register`               | Primary設定されたlink_idが使用される |
+| 8          | 登録済み | なし           | 既存の決済手段を使用して決済する（単一のlink_id） | `payment_method_id`, `plan_id` | `link_id`                    |                                   |
+| 9          | 登録済み | なし           | 既存の決済手段を使用して決済する（複数のlink_id） | `payment_method_id`, `plan_id` | `user_id`                    | Primary設定されたlink_idが使用される |

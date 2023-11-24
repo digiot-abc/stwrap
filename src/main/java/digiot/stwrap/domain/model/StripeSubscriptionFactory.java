@@ -4,10 +4,10 @@ import de.huxhorn.sulky.ulid.ULID;
 
 public class StripeSubscriptionFactory {
 
-    public StripeSubscription create(String stripeUserLinkId, String subscriptionId, String planId, String status) {
+    public StripeSubscription create(String StripeLinkedUserId, String subscriptionId, String planId, String status) {
         StripeSubscription subscription = new StripeSubscription();
         subscription.setId(new ULID().nextULID());
-        subscription.setStripeUserLinkId(stripeUserLinkId);
+        subscription.setStripeLinkedUserId(StripeLinkedUserId);
         subscription.setSubscriptionId(subscriptionId);
         subscription.setPlanId(planId);
         subscription.setStatus(status);

@@ -21,10 +21,10 @@ public interface StripePaymentRepository {
     /**
      * Finds all payment transactions associated with a specific Stripe user link ID.
      *
-     * @param stripeUserLinkId The identifier of the Stripe user link.
+     * @param StripeLinkedUserId The identifier of the Stripe user link.
      * @return A list of StripePayment objects associated with the Stripe user link ID.
      */
-    List<StripePayment> findAllByStripeUserLinkId(String stripeUserLinkId);
+    List<StripePayment> findAllByStripeLinkedUserId(String StripeLinkedUserId);
 
     /**
      * Saves or updates a payment transaction.

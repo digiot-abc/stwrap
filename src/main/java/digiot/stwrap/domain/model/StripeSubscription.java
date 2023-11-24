@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 @Data
 public class StripeSubscription {
     private String id;
-    private String stripeUserLinkId;
+    private String StripeLinkedUserId;
     private String subscriptionId;
     private String planId;
     private String status;

@@ -19,7 +19,7 @@ public class DefaultStripeSubscriptionRepository implements StripeSubscriptionRe
 
     @Override
     public Optional<StripeSubscription> findById(String id) {
-        String sql = "SELECT * FROM subscription WHERE id = ? AND is_deleted = FALSE";
+        String sql = "SELECT * FROM subscription WHERE id = ? AND deleted = FALSE";
 
         try (Connection conn = dataSource.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -30,7 +30,7 @@ public class DefaultStripeSubscriptionRepository implements StripeSubscriptionRe
             if (rs.next()) {
                 StripeSubscription subscription = new StripeSubscription();
                 subscription.setId(rs.getString("id"));
-                subscription.setStripeUserLinkId(rs.getString("stripe_user_link_id"));
+                subscription.setStripeLinkedUserId(rs.getString("stripe_linked_user_id"));
                 subscription.setSubscriptionId(rs.getString("subscription_id"));
                 subscription.setPlanId(rs.getString("plan_id"));
                 subscription.setStatus(rs.getString("status"));
@@ -46,7 +46,7 @@ public class DefaultStripeSubscriptionRepository implements StripeSubscriptionRe
 
     @Override
     public Optional<StripeSubscription> findBySubscriptionId(String subscriptionId) {
-        String sql = "SELECT * FROM subscription WHERE subscription_id = ? AND is_deleted = FALSE";
+        String sql = "SELECT * FROM subscription WHERE subscription_id = ? AND deleted = FALSE";
 
         try (Connection conn = dataSource.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -57,7 +57,7 @@ public class DefaultStripeSubscriptionRepository implements StripeSubscriptionRe
             if (rs.next()) {
                 StripeSubscription subscription = new StripeSubscription();
                 subscription.setId(rs.getString("id"));
-                subscription.setStripeUserLinkId(rs.getString("stripe_user_link_id"));
+                subscription.setStripeLinkedUserId(rs.getString("stripe_linked_user_id"));
                 subscription.setSubscriptionId(rs.getString("subscription_id"));
                 subscription.setPlanId(rs.getString("plan_id"));
                 subscription.setStatus(rs.getString("status"));
@@ -74,7 +74,7 @@ public class DefaultStripeSubscriptionRepository implements StripeSubscriptionRe
     @Override
     public List<StripeSubscription> findAllByPlanId(String planId) {
         List<StripeSubscription> stripeSubscriptions = new ArrayList<>();
-        String sql = "SELECT * FROM stripe_subscription WHERE plan_id = ? AND is_deleted = FALSE";
+        String sql = "SELECT * FROM stripe_subscription WHERE plan_id = ? AND deleted = FALSE";
 
         try (Connection conn = dataSource.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -85,7 +85,7 @@ public class DefaultStripeSubscriptionRepository implements StripeSubscriptionRe
             while (rs.next()) {
                 StripeSubscription stripeSubscription = new StripeSubscription();
                 stripeSubscription.setId(rs.getString("id"));
-                stripeSubscription.setStripeUserLinkId(rs.getString("stripe_user_link_id"));
+                stripeSubscription.setStripeLinkedUserId(rs.getString("stripe_linked_user_id"));
                 stripeSubscription.setSubscriptionId(rs.getString("subscription_id"));
                 stripeSubscription.setPlanId(rs.getString("plan_id"));
                 stripeSubscription.setStatus(rs.getString("status"));
@@ -100,20 +100,20 @@ public class DefaultStripeSubscriptionRepository implements StripeSubscriptionRe
     }
 
     @Override
-    public List<StripeSubscription> findAllByStripeUserLinkId(String stripeUserLinkId) {
+    public List<StripeSubscription> findAllByStripeLinkedUserId(String StripeLinkedUserId) {
         List<StripeSubscription> stripeSubscriptions = new ArrayList<>();
-        String sql = "SELECT * FROM stripe_subscription WHERE stripe_user_link_id = ? AND is_deleted = FALSE";
+        String sql = "SELECT * FROM stripe_subscription WHERE stripe_linked_user_id = ? AND deleted = FALSE";
 
         try (Connection conn = dataSource.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            stmt.setObject(1, stripeUserLinkId);
+            stmt.setObject(1, StripeLinkedUserId);
             ResultSet rs = stmt.executeQuery();
 
             while (rs.next()) {
                 StripeSubscription stripeSubscription = new StripeSubscription();
                 stripeSubscription.setId(rs.getString("id"));
-                stripeSubscription.setStripeUserLinkId(rs.getString("stripe_user_link_id"));
+                stripeSubscription.setStripeLinkedUserId(rs.getString("stripe_linked_user_id"));
                 stripeSubscription.setSubscriptionId(rs.getString("subscription_id"));
                 stripeSubscription.setPlanId(rs.getString("plan_id"));
                 stripeSubscription.setStatus(rs.getString("status"));
@@ -127,55 +127,55 @@ public class DefaultStripeSubscriptionRepository implements StripeSubscriptionRe
         return stripeSubscriptions;
     }
 
-
     @Override
-    public StripeSubscription create(StripeSubscription stripeSubscription) {
-        String sql = "INSERT INTO stripe_subscription (id, stripe_user_link_id, subscription_id, plan_id, status) VALUES (?, ?, ?, ?, ?)";
-
-        try (Connection conn = dataSource.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-
-            stmt.setString(1, stripeSubscription.getId());
-            stmt.setObject(2, stripeSubscription.getStripeUserLinkId());
-            stmt.setString(3, stripeSubscription.getSubscriptionId());
-            stmt.setString(4, stripeSubscription.getPlanId());
-            stmt.setString(5, stripeSubscription.getStatus());
-            int affectedRows = stmt.executeUpdate();
-
-            if (affectedRows == 0) {
-                throw new SQLException("Creating stripe_subscription failed, no rows affected.");
-            }
-
-            try (ResultSet generatedKeys = stmt.getGeneratedKeys()) {
-                if (generatedKeys.next()) {
-                    stripeSubscription.setId(generatedKeys.getString(1));
-                } else {
-                    throw new SQLException("Creating stripe_subscription failed, no ID obtained.");
-                }
-            }
-        } catch (SQLException e) {
-            // Handle exception
-            throw new RuntimeException("Error saving subscription", e);
-        }
-
-        return stripeSubscription;
-    }
-
-    @Override
-    public void delete(StripeSubscription userStripeSubscriptionEntity) {
-        String sql = "UPDATE stripe_subscription SET is_deleted = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = ?";
+    public int insert(StripeSubscription stripeSubscription) {
+        String sql = "INSERT INTO stripe_subscription (id, stripe_linked_user_id, subscription_id, plan_id, status) VALUES (?, ?, ?, ?, ?)";
 
         try (Connection conn = dataSource.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            stmt.setString(1, userStripeSubscriptionEntity.getId());
-            int affectedRows = stmt.executeUpdate();
+            stmt.setString(1, stripeSubscription.getId());
+            stmt.setObject(2, stripeSubscription.getStripeLinkedUserId());
+            stmt.setString(3, stripeSubscription.getSubscriptionId());
+            stmt.setString(4, stripeSubscription.getPlanId());
+            stmt.setString(5, stripeSubscription.getStatus());
 
-            if (affectedRows == 0) {
-                throw new SQLException("Deleting stripe_subscription failed, no rows affected.");
-            }
+            return stmt.executeUpdate();
         } catch (SQLException e) {
             // Handle exception
+            throw new RuntimeException("Error inserting subscription", e);
+        }
+    }
+
+    @Override
+    public int update(StripeSubscription stripeSubscription) {
+        String sql = "UPDATE stripe_subscription SET stripe_linked_user_id = ?, subscription_id = ?, plan_id = ?, status = ? WHERE id = ?";
+
+        try (Connection conn = dataSource.getConnection();
+            PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, stripeSubscription.getStripeLinkedUserId());
+            stmt.setString(2, stripeSubscription.getSubscriptionId());
+            stmt.setString(3, stripeSubscription.getPlanId());
+            stmt.setString(4, stripeSubscription.getStatus());
+            stmt.setString(5, stripeSubscription.getId());
+
+            return stmt.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException("Error updating subscription", e);
+        }
+    }
+
+    @Override
+    public int delete(StripeSubscription stripeSubscription) {
+        String sql = "UPDATE stripe_subscription SET deleted = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = ?";
+
+        try (Connection conn = dataSource.getConnection();
+            PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, stripeSubscription.getId());
+            return stmt.executeUpdate();
+        } catch (SQLException e) {
             throw new RuntimeException("Error deleting subscription", e);
         }
     }

@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 @Data
 public class StripePayment {
     private String id;
-    private String stripeUserLinkId;
+    private String StripeLinkedUserId;
     private String stripeChargeId;
     private BigDecimal amount;
     private String currency;
