@@ -2,7 +2,8 @@ package digiot.stwrap.helper;
 
 import com.stripe.exception.StripeException;
 import com.stripe.model.*;
-import com.stripe.param.*;
+import com.stripe.param.CustomerUpdateParams;
+import com.stripe.param.SubscriptionCreateParams;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -13,9 +14,10 @@ public class StripeTestHelper {
 
     private static final List<Customer> createdCustomers = new ArrayList<>();
     private static final List<Product> createdProducts = new ArrayList<>();
+    private static final List<Subscription> createdSubscriptions = new ArrayList<>();
     private static final List<Plan> createdPlans = new ArrayList<>();
     private static final List<Coupon> createdCoupons = new ArrayList<>();
-    private static final List<PaymentMethod> paymentMethods = new ArrayList<>();
+    private static final List<PaymentMethod> createdPaymentMethods = new ArrayList<>();
 
     public static Customer createTestCustomer(String email) throws StripeException {
         Map<String, Object> customerParams = new HashMap<>();
@@ -25,34 +27,32 @@ public class StripeTestHelper {
         return customer;
     }
 
+    // テスト実施不可
     public static Token createTestToken() throws StripeException {
-        Map<String, Object> cardParams = new HashMap<>();
-        cardParams.put("number", "4242424242424242");
-        cardParams.put("exp_month", 12);
-        cardParams.put("exp_year", 2030);
-        cardParams.put("cvc", "123");
-        Map<String, Object> tokenParams = new HashMap<>();
-        tokenParams.put("card", cardParams);
-        Token token = Token.create(tokenParams);
-        return token;
+//        Map<String, Object> cardParams = new HashMap<>();
+//        cardParams.put("number", "4242424242424242");
+//        cardParams.put("exp_month", 12);
+//        cardParams.put("exp_year", 2030);
+//        cardParams.put("cvc", "123");
+//        Map<String, Object> tokenParams = new HashMap<>();
+//        tokenParams.put("card", cardParams);
+        return Token.retrieve("tok_visa");
     }
 
+    // テスト実施不可
     public static PaymentMethod attachTokenToCustomer(Customer customer, Token token) throws StripeException {
+
         CustomerUpdateParams customerUpdateParams = CustomerUpdateParams.builder()
-            .setSource(token.getId())
-            .build();
+                .setSource(token.getId())
+                .build();
         customer.update(customerUpdateParams);
+
+        // 更新された顧客情報を取得
+        customer = Customer.retrieve(customer.getId());
         String paymentMethodId = customer.getDefaultSource();
         PaymentMethod paymentMethod = PaymentMethod.retrieve(paymentMethodId);
-        paymentMethods.add(paymentMethod);
+        createdPaymentMethods.add(paymentMethod);
         return paymentMethod;
-    }
-
-    public static PaymentMethod attachPaymentMethodToCustomer(Customer customer, PaymentMethod paymentMethod) throws StripeException {
-        PaymentMethodAttachParams params = PaymentMethodAttachParams.builder()
-                .setCustomer(customer.getId())
-                .build();
-        return paymentMethod.attach(params);
     }
 
     public static Product createTestProduct(String name) throws StripeException {
@@ -83,6 +83,21 @@ public class StripeTestHelper {
         return coupon;
     }
 
+    public static Subscription createSubscription(String customerId, String planId) throws StripeException {
+        SubscriptionCreateParams.Item item = SubscriptionCreateParams.Item.builder()
+                .setPlan(planId)
+                .build();
+
+        SubscriptionCreateParams params = SubscriptionCreateParams.builder()
+                .setCustomer(customerId)
+                .addItem(item)
+                .build();
+
+        Subscription subscription = Subscription.create(params);
+        createdSubscriptions.add(subscription);
+        return subscription;
+    }
+
     public static void clean() throws StripeException {
         for (Coupon coupon : createdCoupons) {
             coupon.delete();
@@ -99,11 +114,16 @@ public class StripeTestHelper {
         }
         createdProducts.clear();
 
-        for (PaymentMethod paymentMethod : paymentMethods) {
+        for (Subscription subscription : createdSubscriptions) {
+            subscription.cancel();
+        }
+        createdSubscriptions.clear();
+
+        for (PaymentMethod paymentMethod : createdPaymentMethods) {
             paymentMethod.detach();
         }
-        paymentMethods.clear();
-        
+        createdPaymentMethods.clear();
+
         for (Customer customer : createdCustomers) {
             customer.delete();
         }

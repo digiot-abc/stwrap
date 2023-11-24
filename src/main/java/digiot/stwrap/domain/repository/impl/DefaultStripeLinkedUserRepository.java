@@ -4,7 +4,10 @@ import digiot.stwrap.domain.model.StripeLinkedUser;
 import digiot.stwrap.domain.repository.StripeLinkedUserRepository;
 
 import javax.sql.DataSource;
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -22,7 +25,7 @@ public class DefaultStripeLinkedUserRepository<T> implements StripeLinkedUserRep
 
     @Override
     public Optional<StripeLinkedUser<T>> findPrimaryByUserId(T userId) {
-        String sql = "SELECT * FROM stripe_linked_user WHERE user_id = ? AND primary = true AND deleted = FALSE ORDER BY updated_at DESC LIMIT 1";
+        String sql = "SELECT * FROM stripe_linked_user WHERE user_id = ? AND is_primary = true AND deleted = FALSE ORDER BY updated_at DESC LIMIT 1";
 
         try (Connection conn = dataSource.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -136,8 +139,9 @@ public class DefaultStripeLinkedUserRepository<T> implements StripeLinkedUserRep
     private StripeLinkedUser<T> mapRowToUserStripeLinkEntity(ResultSet rs) throws SQLException {
         StripeLinkedUser<T> StripeLinkedUser = new StripeLinkedUser<>();
         StripeLinkedUser.setId(rs.getString("id"));
-        StripeLinkedUser.setUserId((T) rs.getObject("stripe_linked_user_id"));
+        StripeLinkedUser.setUserId((T) rs.getObject("user_id"));
         StripeLinkedUser.setStripeCustomerId(rs.getString("stripe_customer_id"));
+        StripeLinkedUser.setIsPrimary(rs.getBoolean("is_primary"));
         StripeLinkedUser.setDeleted(rs.getBoolean("deleted"));
         StripeLinkedUser.setCreatedAt(rs.getTimestamp("created_at").toLocalDateTime());
         StripeLinkedUser.setUpdatedAt(rs.getTimestamp("updated_at").toLocalDateTime());

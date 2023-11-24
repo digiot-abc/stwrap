@@ -3,8 +3,10 @@ package digiot.stwrap.application;
 import com.stripe.exception.StripeException;
 import com.stripe.model.Subscription;
 import com.stripe.param.SubscriptionUpdateParams;
+import digiot.stwrap.domain.model.StripeLinkedUser;
 import digiot.stwrap.domain.model.StripeSubscription;
 import digiot.stwrap.domain.model.StripeSubscriptionFactory;
+import digiot.stwrap.domain.repository.StripeLinkedUserRepository;
 import digiot.stwrap.domain.repository.StripeSubscriptionRepository;
 import digiot.stwrap.domain.subscription.SubscriptionItemFactory;
 import lombok.AllArgsConstructor;
@@ -17,6 +19,7 @@ import java.util.Map;
 public class SubscriptionService<T> {
 
     private final CustomerService<T> customerService;
+    private final StripeLinkedUserRepository<T> linkedUserRepository;
     private final StripeSubscriptionRepository subscriptionRepository;
 
     /**
@@ -30,16 +33,19 @@ public class SubscriptionService<T> {
      * @throws StripeException If there is an issue communicating with the Stripe API.
      */
     public Subscription createSubscriptionWithPaymentMethodId(T userId, String planId, String paymentMethodId, int quantity) throws StripeException {
-        String customerId = customerService.getOrCreateCustomer(userId).getId();
+
+        StripeLinkedUser<T> linkedUser = customerService.getOrCreateCustomer(userId);
+
+        customerService.attachPaymentMethodToCustomer(linkedUser.getStripeCustomerId(), paymentMethodId);
 
         Map<String, Object> subscriptionParams = new HashMap<>();
-        subscriptionParams.put("customer", customerId);
+        subscriptionParams.put("customer", linkedUser.getStripeCustomerId());
         subscriptionParams.put("items", SubscriptionItemFactory.createSubscriptionItem(planId, quantity));
         subscriptionParams.put("default_payment_method", paymentMethodId);
 
         Subscription subscription = Subscription.create(subscriptionParams);
         StripeSubscription stripeSubscription = new StripeSubscriptionFactory()
-                .create(customerId, subscription.getId(), planId, subscription.getStatus());
+                .create(linkedUser.getId(), subscription.getId(), planId, subscription.getStatus());
         subscriptionRepository.insert(stripeSubscription);
 
         return subscription;

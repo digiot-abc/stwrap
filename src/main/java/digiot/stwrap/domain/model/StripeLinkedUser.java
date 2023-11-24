@@ -10,7 +10,7 @@ public class StripeLinkedUser<T> {
     private String id;
     private T userId;
     private String stripeCustomerId;
-    private Boolean primary;
+    private Boolean isPrimary;
     private Boolean deleted;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

@@ -1,119 +1,121 @@
-// package digiot.stwrap.application;
+package digiot.stwrap.application;
 
-// import com.stripe.model.Product;
-// import com.stripe.model.Subscription;
-// import com.stripe.model.Token;
-// import com.stripe.model.Customer;
-// import com.stripe.model.Plan;
+import com.stripe.exception.StripeException;
+import com.stripe.model.*;
+import digiot.stwrap.domain.model.StripeLinkedUser;
+import digiot.stwrap.domain.repository.StripeLinkedUserRepository;
+import digiot.stwrap.domain.repository.StripeSubscriptionRepository;
+import digiot.stwrap.domain.repository.impl.DefaultStripeLinkedUserRepository;
+import digiot.stwrap.domain.repository.impl.DefaultStripeSubscriptionRepository;
+import digiot.stwrap.helper.StripeTestHelper;
+import digiot.stwrap.infrastructure.DataSourceProvider;
+import digiot.stwrap.infrastructure.StripeApiKeyInitializer;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-// import digiot.stwrap.domain.model.StripeLinkedUser;
-// import digiot.stwrap.domain.model.StripeSubscription;
-// import digiot.stwrap.domain.repository.StripeSubscriptionRepository;
-// import digiot.stwrap.domain.repository.StripeLinkedUserRepository;
-// import digiot.stwrap.domain.repository.impl.DefaultStripeSubscriptionRepository;
-// import digiot.stwrap.helper.StripeTestHelper;
-// import digiot.stwrap.domain.repository.impl.DefaultStripeLinkedUserRepository;
-// import digiot.stwrap.infrastructure.DataSourceProvider;
+import java.time.Instant;
 
-// import com.stripe.exception.StripeException;
-// import org.junit.jupiter.api.BeforeAll;
-// import org.junit.jupiter.api.BeforeEach;
-// import org.junit.jupiter.api.Test;
-// import org.junit.jupiter.api.AfterAll;
-// import org.junit.jupiter.api.AfterEach;
+import static org.junit.jupiter.api.Assertions.*;
 
-// import static org.junit.jupiter.api.Assertions.*;
+public class SubscriptionServiceTest {
 
-// import java.time.Instant;
-// import java.util.ArrayList;
-// import java.util.HashMap;
-// import java.util.List;
-// import java.util.Map;
+    private SubscriptionService<String> subscriptionService;
 
-// public class SubscriptionServiceTest {
+    // リポジトリの実際のインスタンスを生成
+    StripeLinkedUserRepository<String> userLinkRepository = new DefaultStripeLinkedUserRepository<>(DataSourceProvider.getDataSource());
+    StripeSubscriptionRepository subscriptionRepository = new DefaultStripeSubscriptionRepository(DataSourceProvider.getDataSource());
+    CustomerService<String> customerService = new CustomerService<>(userLinkRepository);
 
-//     private SubscriptionService<String> subscriptionService;
+    @BeforeAll
+    static void setUpAll() {
+        StripeApiKeyInitializer.initialize();
+    }
 
-//     @BeforeEach
-//     void setUp() throws StripeException {
+    @BeforeEach
+    void setUp() throws StripeException {
 
-//         // リポジトリの実際のインスタンスを生成
-//         StripeLinkedUserRepository<String> userLinkRepository = new DefaultStripeLinkedUserRepository<>(DataSourceProvider.getDataSource());
-//         StripeSubscriptionRepository subscriptionRepository = new DefaultStripeSubscriptionRepository(DataSourceProvider.getDataSource());
-//         CustomerService<String> customerService = new CustomerService<>(userLinkRepository);
+        // SubscriptionServiceのインスタンスを生成
+        subscriptionService = new SubscriptionService<>(customerService, userLinkRepository, subscriptionRepository);
+    }
 
-//         // SubscriptionServiceのインスタンスを生成
-//         subscriptionService = new SubscriptionService<>(customerService, subscriptionRepository);
-//     }
+    @AfterEach
+    void tearDownEach() throws StripeException {
+        StripeTestHelper.clean();
+    }
 
-//     @AfterEach
-//     void tearDownEach() throws StripeException {
-//         StripeTestHelper.clean();
-//     }
+    @Test
+    void createSubscriptionWithPaymentMethodId_successful() throws StripeException {
 
-//     @Test
-//     void createSubscriptionWithPaymentMethodId_successful() throws StripeException {
-//         Plan testPlan = StripeTestHelper.createTestPlan("Test Plan 1", 1000, "usd", "month");
-//         Customer testCustomer = StripeTestHelper.createTestCustomer("test@example.com");
-//         Token token = StripeTestHelper.createTestToken();
+        String userId = "service_user";
 
-//         String userId = testCustomer.getId();
-//         String planId = testPlan.getId();
-//         int quantity = 1;
+        StripeLinkedUser<?> linkedUser = customerService.getOrCreateCustomer(userId);
 
-//         Subscription subscription = subscriptionService.createSubscriptionWithPaymentMethodId(userId, planId, paymentMethodId, quantity);
-//         assertNotNull(subscription);
-//         assertEquals("active", subscription.getStatus());
-//     }
+        Product testProduct = StripeTestHelper.createTestProduct("Product");
+        Plan testPlan = StripeTestHelper.createTestPlan(testProduct.getId(), 1000, "usd", "month");
+        Token token = StripeTestHelper.createTestToken();
 
-//     @Test
-//     void createSubscriptionWithToken_successful() throws StripeException {
-//         Plan testPlan = StripeTestHelper.createTestPlan("Test Plan 2", 1000, "usd", "month");
-//         String token = StripeTestHelper.createTestToken().getId();
-//         String userId = "testUserId"; // Stripeの顧客IDを使用する場合は適切に設定
-//         String planId = testPlan.getId();
-//         int quantity = 1;
+        String paymentMethodId = StripeTestHelper.attachTokenToCustomer(Customer.retrieve(linkedUser.getStripeCustomerId()), token).getId();
 
-//         Subscription subscription = subscriptionService.createSubscriptionWithToken(userId, planId, token, quantity);
-//         assertNotNull(subscription);
-//         assertEquals("active", subscription.getStatus());
-//     }
+        String planId = testPlan.getId();
+        int quantity = 1;
 
-//     @Test
-//     void applyCouponToSubscription_successful() throws StripeException {
-//         Plan testPlan = StripeTestHelper.createTestPlan("Test Plan 3", 1000, "usd", "month");
-//         Customer testCustomer = StripeTestHelper.createTestCustomer("test@example.com");
-//         Subscription testSubscription = createTestSubscription(testCustomer.getId(), testPlan.getId(), 1);
-//         String subscriptionId = testSubscription.getId();
-//         Coupon testCoupon = StripeTestHelper.createTestCoupon(10, "once"); // 10%オフのクーポン
+        Subscription subscription = subscriptionService.createSubscriptionWithPaymentMethodId(userId, planId, paymentMethodId, quantity);
+        assertNotNull(subscription);
+        assertEquals("active", subscription.getStatus());
+    }
 
-//         Subscription subscription = subscriptionService.applyCouponToSubscription(subscriptionId, testCoupon.getId());
-//         assertNotNull(subscription);
-//         // クーポン適用後のアサーション
-//     }
+    @Test
+    void createSubscriptionWithToken_successful() throws StripeException {
+        Plan testPlan = StripeTestHelper.createTestPlan("Test Plan 2", 1000, "usd", "month");
+        String token = StripeTestHelper.createTestToken().getId();
+        String userId = "testUserId"; // Stripeの顧客IDを使用する場合は適切に設定
+        String planId = testPlan.getId();
+        int quantity = 1;
 
-//     @Test
-//     void cancelSubscriptionAtDate_successful() throws StripeException {
-//         Plan testPlan = StripeTestHelper.createTestPlan("Test Plan 4", 1000, "usd", "month");
-//         Customer testCustomer = StripeTestHelper.createTestCustomer("test@example.com");
-//         Subscription testSubscription = createTestSubscription(testCustomer.getId(), testPlan.getId(), 1);
-//         String subscriptionId = testSubscription.getId();
-//         Instant cancelAt = Instant.now().plusSeconds(3600); // 1時間後
+        Subscription subscription = subscriptionService.createSubscriptionWithToken(userId, planId, token, quantity);
+        assertNotNull(subscription);
+        assertEquals("active", subscription.getStatus());
+    }
 
-//         Subscription subscription = subscriptionService.cancelSubscriptionAtDate(subscriptionId, cancelAt);
-//         assertNotNull(subscription);
-//         assertEquals(cancelAt.getEpochSecond(), subscription.getCancelAt());
-//     }
+    @Test
+    void applyCouponToSubscription_successful() throws StripeException {
+        Plan testPlan = StripeTestHelper.createTestPlan("Test Plan 3", 1000, "usd", "month");
+        Customer testCustomer = StripeTestHelper.createTestCustomer("test@example.com");
 
-//     @Test
-//     void cancelSubscriptionAtPeriodEnd_successful() throws StripeException {
-//         Plan testPlan = StripeTestHelper.createTestPlan("Test Plan 5", 1000, "usd", "month");
-//         Customer testCustomer = StripeTestHelper.createTestCustomer("test@example.com");
-//         Subscription testSubscription = createTestSubscription(testCustomer.getId(), testPlan.getId(), 1);
-//         String subscriptionId = testSubscription.getId();
+        Product product = StripeTestHelper.createTestProduct("Product");
+        Plan plan = StripeTestHelper.createTestPlan(product.getId(), 1, "usd", "month");
 
-//         Subscription subscription = subscriptionService.cancelSubscriptionAtPeriodEnd(subscriptionId);
-//         assertNotNull(subscription);
-//         assertTrue(subscription.getCancelAtPeriodEnd());
-//     }
-// }
+        String subscriptionId = StripeTestHelper.createSubscription(testCustomer.getId(), plan.getId()).getId();
+        Coupon testCoupon = StripeTestHelper.createTestCoupon(10, "once"); // 10%オフのクーポン
+
+        Subscription subscription = subscriptionService.applyCouponToSubscription(subscriptionId, testCoupon.getId());
+        assertNotNull(subscription);
+    }
+
+    @Test
+    void cancelSubscriptionAtDate_successful() throws StripeException {
+        Plan testPlan = StripeTestHelper.createTestPlan("Test Plan 4", 1000, "usd", "month");
+        Customer testCustomer = StripeTestHelper.createTestCustomer("test@example.com");
+        Subscription testSubscription = StripeTestHelper.createSubscription(testCustomer.getId(), testPlan.getId());
+        String subscriptionId = testSubscription.getId();
+        Instant cancelAt = Instant.now().plusSeconds(3600); // 1時間後
+
+        Subscription subscription = subscriptionService.cancelSubscriptionAtDate(subscriptionId, cancelAt);
+        assertNotNull(subscription);
+        assertEquals(cancelAt.getEpochSecond(), subscription.getCancelAt());
+    }
+
+    @Test
+    void cancelSubscriptionAtPeriodEnd_successful() throws StripeException {
+        Plan testPlan = StripeTestHelper.createTestPlan("Test Plan 5", 1000, "usd", "month");
+        Customer testCustomer = StripeTestHelper.createTestCustomer("test@example.com");
+        Subscription testSubscription = StripeTestHelper.createSubscription(testCustomer.getId(), testPlan.getId());
+        String subscriptionId = testSubscription.getId();
+
+        Subscription subscription = subscriptionService.cancelSubscriptionAtPeriodEnd(subscriptionId);
+        assertNotNull(subscription);
+        assertTrue(subscription.getCancelAtPeriodEnd());
+    }
+}
