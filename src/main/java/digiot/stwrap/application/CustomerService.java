@@ -26,7 +26,7 @@ public class CustomerService<T> {
         if (link.isPresent()) {
             // 既存のStripe Customerを取得
             return link.get();
-        } 
+        }
         
         // 新規のStripe Customerを作成
         CustomerCreateParams params = CustomerCreateParams.builder()
@@ -58,7 +58,7 @@ public class CustomerService<T> {
         // 顧客にトークンを紐付けて支払い方法を更新
         CustomerUpdateParams customerUpdateParams = CustomerUpdateParams.builder()
                 .setDefaultSource(token)
-            .build();
+                .build();
         customer.update(customerUpdateParams);
 
         // 顧客に紐付けられたデフォルトの支払い方法IDを取得

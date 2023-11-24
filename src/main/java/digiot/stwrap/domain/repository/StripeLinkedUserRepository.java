@@ -28,6 +28,13 @@ public interface StripeLinkedUserRepository<T> {
     List<StripeLinkedUser<T>> findAllLinksByUserId(T userId);
 
     /**
+     * Finds all.
+     *
+     * @return A list of UserStripeLinkEntity objects.
+     */
+    List<StripeLinkedUser<T>> findAll();
+
+    /**
      * Finds the latest Stripe customer ID link associated with a given user ID.
      *
      * @param userId The unique identifier of the user.

@@ -43,15 +43,19 @@ public class SubscriptionServiceTest {
     @AfterEach
     void tearDownEach() throws StripeException {
         StripeTestHelper.clean();
+        userLinkRepository.findAll().forEach(u -> {
+            try {
+                Customer.retrieve(u.getStripeCustomerId()).delete();
+            } catch (StripeException e) {
+                e.printStackTrace();
+            }
+        });
     }
 
     @Test
     void createSubscriptionWithPaymentMethodId_successful() throws StripeException {
-
         String userId = "service_user";
-
         StripeLinkedUser<?> linkedUser = customerService.getOrCreateCustomer(userId);
-
         Product testProduct = StripeTestHelper.createTestProduct("Product");
         Plan testPlan = StripeTestHelper.createTestPlan(testProduct.getId(), 1000, "usd", "month");
         Token token = StripeTestHelper.createTestToken();
@@ -68,13 +72,15 @@ public class SubscriptionServiceTest {
 
     @Test
     void createSubscriptionWithToken_successful() throws StripeException {
-        Plan testPlan = StripeTestHelper.createTestPlan("Test Plan 2", 1000, "usd", "month");
+        String userId = "service_user";
+        StripeLinkedUser<String> linkedUser = customerService.getOrCreateCustomer(userId);
+        Product testProduct = StripeTestHelper.createTestProduct("Product");
+        Plan testPlan = StripeTestHelper.createTestPlan(testProduct.getId(), 1000, "usd", "month");
         String token = StripeTestHelper.createTestToken().getId();
-        String userId = "testUserId"; // Stripeの顧客IDを使用する場合は適切に設定
         String planId = testPlan.getId();
         int quantity = 1;
 
-        Subscription subscription = subscriptionService.createSubscriptionWithToken(userId, planId, token, quantity);
+        Subscription subscription = subscriptionService.createSubscriptionWithToken(linkedUser.getUserId(), planId, token, quantity);
         assertNotNull(subscription);
         assertEquals("active", subscription.getStatus());
     }

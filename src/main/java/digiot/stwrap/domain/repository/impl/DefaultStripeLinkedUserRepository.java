@@ -44,6 +44,26 @@ public class DefaultStripeLinkedUserRepository<T> implements StripeLinkedUserRep
     }
 
     @Override
+    public List<StripeLinkedUser<T>> findAll() {
+        List<StripeLinkedUser<T>> links = new ArrayList<>();
+        String sql = "SELECT * FROM stripe_linked_user WHERE deleted = FALSE";
+
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    links.add(mapRowToUserStripeLinkEntity(rs));
+                }
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Error querying stripe_linked_user", e);
+        }
+
+        return links;
+    }
+
+    @Override
     public List<StripeLinkedUser<T>> findAllLinksByUserId(T userId) {
         List<StripeLinkedUser<T>> links = new ArrayList<>();
         String sql = "SELECT * FROM stripe_linked_user WHERE user_id = ? AND deleted = FALSE";
@@ -147,5 +167,6 @@ public class DefaultStripeLinkedUserRepository<T> implements StripeLinkedUserRep
         StripeLinkedUser.setUpdatedAt(rs.getTimestamp("updated_at").toLocalDateTime());
         return StripeLinkedUser;
     }
+
 }
 
