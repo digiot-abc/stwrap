@@ -10,6 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
 
       - name: Set up Ruby for Asciidoctor
         uses: ruby/setup-ruby@v1
@@ -30,3 +32,18 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./output/v${{ env.PROJECT_VERSION }}
+          destination_dir: v${{ env.PROJECT_VERSION }}
+
+      - name: Create index page
+        run: |
+          if [ ! -f "index.html" ]; then
+            echo "<html><head><title>Documentation Versions</title></head><body><h1>Available Versions</h1><ul>" > index.html
+            git tag --sort=-v:refname | grep '^v' | while read -r version; do
+              echo "<li><a href='./$version/'>${version}</a></li>" >> index.html
+            done
+            echo "</ul></body></html>" >> index.html
+            git checkout gh-pages
+            git add index.html
+            git commit -m "Update index page with version ${{ env.PROJECT_VERSION }}"
+            git push origin gh-pages
+          fi
