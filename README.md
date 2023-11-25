@@ -1,11 +1,35 @@
-# Stwrap
+# Stwrap Java
 
 This library is designed to link your service's user ID with the Stripe customer ID for easy payment processing. Below
 is a sample table definition which you can customize according to your user ID format.
 
-## Sample Table Definition
+## 機能
 
-Here's a sample SQL script to create the `user_stripe_link` table:
+- Stripe 顧客と既存システムの利用者の紐づけ
+
+## 前提条件
+
+- Java 11 またはそれ以上
+- Maven
+
+## インストール
+
+Mavenを使用してstwrapをプロジェクトに追加します
+
+```xml
+
+<dependency>
+    <groupId>digiot</groupId>
+    <artifactId>stwrap</artifactId>
+    <version>0.9.0</version>
+</dependency>
+```
+
+## 使い方
+
+### テーブル構築
+
+初めに、以下を参考に `user_stripe_link` テーブルを構築します。user_id カラムは、ご自身のシステムで管理している利用者IDに使用している型にあわせてください。
 
 ```sql
 CREATE TABLE user_stripe_link
@@ -13,69 +37,106 @@ CREATE TABLE user_stripe_link
     id                 VARCHAR(32) PRIMARY KEY,
     user_id            VARCHAR(255) NOT NULL,
     stripe_customer_id VARCHAR(255) NOT NULL,
+    primary BOOLEAN DEFAULT FALSE,
     deleted         BOOLEAN   DEFAULT FALSE,
     created_at         TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at         TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 ```
 
-Please ensure that the user_id field type matches the type of the user ID used in your service. Adjust the VARCHAR
-length accordingly.
-
-We recommend putting indexes on user_id and stripe_customer_id.
+We recommend putting indexes on `user_id` and `stripe_customer_id`.
 
 ```sql
 CREATE INDEX idx_user_stripe_link_user_id ON user_stripe_link (user_id);
 CREATE INDEX idx_user_stripe_link_stripe_customer_id ON user_stripe_link (stripe_customer_id);
 ```
 
-## UserStripeLinkEntity
+### 実装
+
+**既存システムの利用者にサブスクリプションを適用する場合：**
+
+```java
+import com.stripe.Stripe;
+import digiot.stwrap.application.CustomerService;
+import digiot.stwrap.application.SubscriptionService;
+import digiot.stwrap.domain.model.UserId;
+import digiot.stwrap.domain.repository.StripeLinkedUserRepository;
+
+public class SubscriptionExample {
+
+    static {
+        // It is also possible to set the environment variable STRIPE_API_KEY.
+        Stripe.apiKey = "your_api_key_here";
+    }
+
+    StripeLinkedUserRepository repository = new ImplementedStripeLinkedUserRepository();
+    CustomerService customerService = new CustomerService(repository);
+    SubscriptionService subscriptionService = new SubscriptionService(customerService);
+
+    public void subscription(String planId, String token, int quantity) {
+        UserId userId = UserId.valueOf(/*  Your system's user_id. */);
+        Subscription subscription = subscriptionService.createSubscriptionWithToken(userId, planId, token, quantity);
+        // any code...
+    }
+}
+```
+
+Spring Data JPA をサポートしています。上記の場合、Spring をご使用の場合は `@Autowired`
+アノテーションを付与した `SubscriptionService` を定義するだけで使用することができます。。
+
+**既存システムの利用者に紐づく、 Stripe が保持している Customer オブジェクトを取得したい場合：**
+
+```java
+import com.stripe.model.Customer;
+import digiot.stwrap.application.CustomerService;
+import digiot.stwrap.domain.model.StripeLinkedUser;
+import digiot.stwrap.domain.repository.StripeLinkedUserRepository;
+
+public class CustomerExample {
+
+    static {
+        // It is also possible to set the environment variable STRIPE_API_KEY.
+        Stripe.apiKey = "your_api_key_here";
+    }
+
+    StripeLinkedUserRepository repository = new ImplementedStripeLinkedUserRepository();
+    CustomerService customerService = new CustomerService(repository);
+
+    public Customer getStripeCustomer() {
+        UserId userId = UserId.valueOf(/*  Your system's user_id. */);
+        StripeLinkedUser linkedUser = customerService.getOrCreateStripeLinkedUser(userId);
+        return Customer.retrieve(linkedUser.getStripeCustomerId());
+    }
+}
+```
+
+==== TODO ====
+
+## Tips
+
+### UserStripeLinkEntity
 
 以下は、サービスのユーザーIDとStripe顧客IDの関係をモデル化する`UserStripeLinkEntity`クラスです。`userId`
-フィールドはジェネリックで、ユーザーIDフィールドに合わせて任意の型を使用できます。
+フィールドは連携システムで扱うユーザーIDの型をラップする役割があります。
 
 ```java
 import java.time.LocalDateTime;
 
-public class UserStripeLinkEntity<T> {
+public class UserStripeLinkEntity {
 
     private String id;
-    private T userId;
+    private UserId userId;
     private String stripeCustomerId;
     private boolean isDeleted;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    // ゲッターとセッター
 }
 ```
 
 ## UserStripeLinkRepository
 
-ユーザーとStripe顧客IDのリンクを管理するUserStripeLinkRepositoryインターフェイスも実装する必要があります。その一例を以下に示します。
-
-```java
-import digiot.stwrap.domain.model.StripeLinkedUser;
-import digiot.stwrap.domain.model.UserStripeLink;
-import digiot.stwrap.domain.model.UserStripeLinkEntity;
-
-import java.util.List;
-
-public interface UserStripeLinkRepository<T> {
-
-    List<StripeLinkedUser<T>> findAllLinksByUserId(T userId);
-
-    StripeLinkedUser<T> findLatestLinkByUserId(T userId);
-
-    StripeLinkedUser<T> create(StripeLinkedUser<T> StripeLinkedUser);
-
-    void update(StripeLinkedUser<T> link);
-
-    void delete(StripeLinkedUser<T> link);
-}
-```
-
-このインターフェイスは、ユーザーとStripeのリンクを管理するために必要な基本的なCRUD操作を定義しています。
+基本的には、Spring での使用を想定しています。Spring Data JPA をサポートしています。
 
 ## 想定される決済手段
 | ケース番号 | 登録状況 | 決済手段の登録 | 決済時の行動                             | 必要なパラメータ (Stripe)   | 必要なパラメータ (本ライブラリ)         | 備考                              |

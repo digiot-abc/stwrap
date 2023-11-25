@@ -47,7 +47,7 @@ public class CustomerService {
         }
 
         CustomerCreateParams params = CustomerCreateParams.builder()
-                .setName(String.valueOf(userId))
+                .setName(userId.toString())
                 .setEmail(email)
                 .setDescription("Customer for user ID: " + userId)
                 .build();

@@ -18,7 +18,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class DefaultStripeLinkedUserRepositoryTest {
+class TestStripeLinkedUserRepositoryDefault {
 
     private StripeLinkedUserRepository repository;
 
