@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          fetch-depth: 0
+          fetch-depth: 0  # タグ情報も含めて全ての履歴を取得する
 
       - name: Set up Ruby for Asciidoctor
         uses: ruby/setup-ruby@v1
@@ -24,26 +24,46 @@ jobs:
       - name: Extract project version from pom.xml
         run: echo "PROJECT_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)" >> $GITHUB_ENV
 
+      - name: Checkout gh-pages branch
+        uses: actions/checkout@v2
+        with:
+          ref: 'gh-pages'  # gh-pages ブランチをチェックアウト
+
+      - name: Remove old documentation version
+        run: |
+          if [ -d "v${{ env.PROJECT_VERSION }}" ]; then
+            git rm -rf "v${{ env.PROJECT_VERSION }}"
+            git commit -m "Remove old docs for v${{ env.PROJECT_VERSION }}"
+          fi
+
+      - name: Checkout main branch again
+        uses: actions/checkout@v2
+        with:
+          ref: 'main'
+
       - name: Build Asciidoc documentation
         run: asciidoctor -r asciidoctor-diagram -b html5 ./docs/*.adoc -D output/v${{ env.PROJECT_VERSION }}
 
-      - name: Deploy to GitHub Pages
+      - name: Deploy new documentation to gh-pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./output/v${{ env.PROJECT_VERSION }}
-          destination_dir: v${{ env.PROJECT_VERSION }}
+          keep_files: true  # 他のバージョンのファイルを保持する
 
-      - name: Create index page
+      - name: Generate index page for versions
         run: |
-          if [ ! -f "index.html" ]; then
-            echo "<html><head><title>Documentation Versions</title></head><body><h1>Available Versions</h1><ul>" > index.html
-            git tag --sort=-v:refname | grep '^v' | while read -r version; do
-              echo "<li><a href='./$version/'>${version}</a></li>" >> index.html
-            done
-            echo "</ul></body></html>" >> index.html
-            git checkout gh-pages
-            git add index.html
-            git commit -m "Update index page with version ${{ env.PROJECT_VERSION }}"
-            git push origin gh-pages
-          fi
+          mkdir -p output/versions
+          echo "<html><head><title>Documentation Versions</title></head><body><h1>Available Versions</h1><ul>" > output/versions/index.html
+          ls output/ | grep '^v' | sort --version-sort | while read -r version; do
+            echo "<li><a href='../${version}/index.html'>${version}</a></li>" >> output/versions/index.html
+          done
+          echo "</ul></body></html>" >> output/versions/index.html
+
+      - name: Deploy index page to gh-pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./output/versions
+          destination_dir: .  # ルートディレクトリにデプロイ
+          keep_files: true  # 以前のファイルを保持する
