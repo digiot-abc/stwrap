@@ -4,11 +4,12 @@ import com.stripe.exception.StripeException;
 import com.stripe.model.*;
 import com.stripe.param.InvoiceUpcomingParams;
 import digiot.stwrap.domain.model.StripeLinkedUser;
+import digiot.stwrap.domain.model.UserId;
 import digiot.stwrap.domain.repository.StripeLinkedUserRepository;
 import digiot.stwrap.domain.repository.impl.DefaultStripeLinkedUserRepository;
-import digiot.stwrap.helper.StripeTestHelper;
 import digiot.stwrap.infrastructure.DataSourceProvider;
 import digiot.stwrap.infrastructure.StripeApiKeyInitializer;
+import digiot.stwrap.infrastructure.helper.StripeTestHelper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -19,9 +20,9 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class SubscriptionServiceTest {
 
-    StripeLinkedUserRepository<String> userLinkRepository = new DefaultStripeLinkedUserRepository<>(DataSourceProvider.getDataSource());
-    CustomerService<String> customerService = new CustomerService<>(userLinkRepository);
-    SubscriptionService<String> subscriptionService = new SubscriptionService<>(customerService);
+    StripeLinkedUserRepository userLinkRepository = new DefaultStripeLinkedUserRepository(DataSourceProvider.getDataSource());
+    CustomerService customerService = new CustomerService(userLinkRepository);
+    SubscriptionService subscriptionService = new SubscriptionService(customerService);
 
     @BeforeAll
     static void setUpAll() {
@@ -44,7 +45,7 @@ public class SubscriptionServiceTest {
     void createSubscriptionWithPaymentMethodId_successful() throws StripeException {
 
         String userId = "service_user1";
-        StripeLinkedUser<?> linkedUser = customerService.getOrCreateStripeLinkedUser(userId);
+        StripeLinkedUser linkedUser = customerService.getOrCreateStripeLinkedUser(UserId.valueOf(userId));
         Product testProduct = StripeTestHelper.createTestProduct("Product");
         Plan testPlan = StripeTestHelper.createTestPlan(testProduct.getId(), 1000, "usd", "month");
         Token token = StripeTestHelper.createTestToken();
@@ -54,7 +55,7 @@ public class SubscriptionServiceTest {
         String planId = testPlan.getId();
         int quantity = 1;
 
-        Subscription subscription = subscriptionService.createSubscriptionWithPaymentMethodId(userId, planId, paymentMethodId, quantity);
+        Subscription subscription = subscriptionService.createSubscriptionWithPaymentMethodId(UserId.valueOf(userId), planId, paymentMethodId, quantity);
         assertNotNull(subscription);
         assertEquals("active", subscription.getStatus());
     }
@@ -63,7 +64,7 @@ public class SubscriptionServiceTest {
     void createSubscriptionWithToken_successful() throws StripeException {
 
         String userId = "service_user2";
-        StripeLinkedUser<String> linkedUser = customerService.getOrCreateStripeLinkedUser(userId);
+        StripeLinkedUser linkedUser = customerService.getOrCreateStripeLinkedUser(UserId.valueOf(userId));
         Product testProduct = StripeTestHelper.createTestProduct("Product");
         Plan testPlan = StripeTestHelper.createTestPlan(testProduct.getId(), 1000, "usd", "month");
         String token = StripeTestHelper.createTestToken().getId();
@@ -80,7 +81,7 @@ public class SubscriptionServiceTest {
 
         // Create customer
         String userId = "service_user3";
-        StripeLinkedUser<String> linkedUser = customerService.getOrCreateStripeLinkedUser(userId);
+        StripeLinkedUser linkedUser = customerService.getOrCreateStripeLinkedUser(UserId.valueOf(userId));
 
         // Create product
         Product testProduct = StripeTestHelper.createTestProduct("Product");
@@ -116,7 +117,7 @@ public class SubscriptionServiceTest {
     void cancelSubscriptionAtDate_successful() throws StripeException {
 
         String userId = "service_user4";
-        StripeLinkedUser<?> linkedUser = customerService.getOrCreateStripeLinkedUser(userId);
+        StripeLinkedUser linkedUser = customerService.getOrCreateStripeLinkedUser(UserId.valueOf(userId));
         Product testProduct = StripeTestHelper.createTestProduct("Product");
         Plan testPlan = StripeTestHelper.createTestPlan(testProduct.getId(), 1000, "usd", "month");
         Token token = StripeTestHelper.createTestToken();
@@ -126,7 +127,7 @@ public class SubscriptionServiceTest {
         String planId = testPlan.getId();
         int quantity = 1;
 
-        Subscription subscription = subscriptionService.createSubscriptionWithPaymentMethodId(userId, planId, paymentMethodId, quantity);
+        Subscription subscription = subscriptionService.createSubscriptionWithPaymentMethodId(UserId.valueOf(userId), planId, paymentMethodId, quantity);
         assertEquals("active", subscription.getStatus());
 
         OffsetDateTime cancelAt = OffsetDateTime.now().plusMonths(1L);
@@ -138,7 +139,7 @@ public class SubscriptionServiceTest {
     void cancelSubscriptionMidTerm_successful() throws StripeException {
 
         String userId = "service_user5";
-        StripeLinkedUser<?> linkedUser = customerService.getOrCreateStripeLinkedUser(userId);
+        StripeLinkedUser linkedUser = customerService.getOrCreateStripeLinkedUser(UserId.valueOf(userId));
         Product testProduct = StripeTestHelper.createTestProduct("Product");
         Plan testPlan = StripeTestHelper.createTestPlan(testProduct.getId(), 1000, "usd", "month");
         Token token = StripeTestHelper.createTestToken();
@@ -148,7 +149,7 @@ public class SubscriptionServiceTest {
         String planId = testPlan.getId();
         int quantity = 1;
 
-        Subscription subscription = subscriptionService.createSubscriptionWithPaymentMethodId(userId, planId, paymentMethodId, quantity);
+        Subscription subscription = subscriptionService.createSubscriptionWithPaymentMethodId(UserId.valueOf(userId), planId, paymentMethodId, quantity);
         assertEquals("active", subscription.getStatus());
 
         OffsetDateTime now = OffsetDateTime.now();
@@ -170,7 +171,7 @@ public class SubscriptionServiceTest {
     void cancelSubscriptionAtPeriodEnd_successful() throws StripeException {
 
         String userId = "service_user6";
-        StripeLinkedUser<?> linkedUser = customerService.getOrCreateStripeLinkedUser(userId);
+        StripeLinkedUser linkedUser = customerService.getOrCreateStripeLinkedUser(UserId.valueOf(userId));
         Product testProduct = StripeTestHelper.createTestProduct("Product");
         Plan testPlan = StripeTestHelper.createTestPlan(testProduct.getId(), 1000, "usd", "month");
         Token token = StripeTestHelper.createTestToken();
@@ -180,7 +181,7 @@ public class SubscriptionServiceTest {
         String planId = testPlan.getId();
         int quantity = 1;
 
-        Subscription subscription = subscriptionService.createSubscriptionWithPaymentMethodId(userId, planId, paymentMethodId, quantity);
+        Subscription subscription = subscriptionService.createSubscriptionWithPaymentMethodId(UserId.valueOf(userId), planId, paymentMethodId, quantity);
         assertEquals("active", subscription.getStatus());
 
         subscription = subscriptionService.cancelSubscriptionAtPeriodEnd(subscription.getId());

@@ -3,12 +3,13 @@ package digiot.stwrap.application;
 import com.stripe.exception.StripeException;
 import com.stripe.model.Invoice;
 import com.stripe.param.InvoiceUpcomingParams;
+import digiot.stwrap.domain.model.UserId;
 import lombok.AllArgsConstructor;
 
 @AllArgsConstructor
-public class InvoiceService<T> {
+public class InvoiceService {
 
-    final CustomerService<T> customerService;
+    final CustomerService customerService;
 
     /**
      * Retrieves the next upcoming invoice for a given customer.
@@ -17,7 +18,7 @@ public class InvoiceService<T> {
      * @return The upcoming Invoice object for the specified user, or null if there is no upcoming invoice.
      * @throws StripeException If an error occurs during communication with the Stripe API.
      */
-    public Invoice getNextInvoice(T userId) throws StripeException {
+    public Invoice getNextInvoice(UserId userId) throws StripeException {
 
         // Retrieve the Stripe customer ID for the given user ID.
         String customerId = customerService.getOrCreateStripeLinkedUser(userId).getStripeCustomerId();

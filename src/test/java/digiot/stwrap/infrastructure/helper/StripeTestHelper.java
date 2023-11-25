@@ -1,4 +1,4 @@
-package digiot.stwrap.helper;
+package digiot.stwrap.infrastructure.helper;
 
 import com.stripe.exception.StripeException;
 import com.stripe.model.*;

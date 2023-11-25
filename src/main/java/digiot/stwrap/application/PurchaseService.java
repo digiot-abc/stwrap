@@ -5,8 +5,6 @@ import com.stripe.model.Charge;
 import com.stripe.model.Token;
 import digiot.stwrap.domain.model.StripeLinkedUser;
 import digiot.stwrap.domain.repository.StripeLinkedUserRepository;
-import digiot.stwrap.domain.repository.impl.DefaultStripeLinkedUserRepository;
-import digiot.stwrap.infrastructure.DataSourceProvider;
 import lombok.AllArgsConstructor;
 
 import java.util.HashMap;
@@ -15,11 +13,7 @@ import java.util.Map;
 @AllArgsConstructor
 public class PurchaseService {
 
-    final StripeLinkedUserRepository<?> stripeRepository;
-
-    public PurchaseService() {
-        this(new DefaultStripeLinkedUserRepository<String>(DataSourceProvider.getDataSource()));
-    }
+    final StripeLinkedUserRepository stripeRepository;
 
     /**
      * Creates a charge on a customer's card.
@@ -34,7 +28,7 @@ public class PurchaseService {
      * {@link #charge(StripeLinkedUser, int, String, Token)} to specify
      * the credit card information.
      */
-    public Charge charge(StripeLinkedUser<?> entity, int amount, String currency) throws StripeException {
+    public Charge charge(StripeLinkedUser entity, int amount, String currency) throws StripeException {
         return charge(entity, amount, currency, (String) null);
     }
 
@@ -48,7 +42,7 @@ public class PurchaseService {
      * @return Charge object representing the transaction.
      * @throws StripeException if an error occurs during the charge.
      */
-    public Charge charge(StripeLinkedUser<?> entity, int amount, String currency, String creditCardInfo) throws StripeException {
+    public Charge charge(StripeLinkedUser entity, int amount, String currency, String creditCardInfo) throws StripeException {
         Token token = null;
         if (creditCardInfo != null) {
             Map<String, Object> tokenParams = new HashMap<>();
@@ -68,7 +62,7 @@ public class PurchaseService {
      * @return Charge object representing the transaction.
      * @throws StripeException if an error occurs during the charge.
      */
-    public Charge charge(StripeLinkedUser<?> entity, int amount, String currency, Token creditCardInfo) throws StripeException {
+    public Charge charge(StripeLinkedUser entity, int amount, String currency, Token creditCardInfo) throws StripeException {
         Map<String, Object> chargeParams = new HashMap<>();
         chargeParams.put("amount", amount);
         chargeParams.put("currency", currency);

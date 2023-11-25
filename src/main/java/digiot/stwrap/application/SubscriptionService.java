@@ -5,6 +5,7 @@ import com.stripe.model.Subscription;
 import com.stripe.param.PaymentMethodCreateParams;
 import com.stripe.param.SubscriptionUpdateParams;
 import digiot.stwrap.domain.model.StripeLinkedUser;
+import digiot.stwrap.domain.model.UserId;
 import digiot.stwrap.domain.subscription.SubscriptionItemFactory;
 import lombok.AllArgsConstructor;
 
@@ -14,9 +15,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 @AllArgsConstructor
-public class SubscriptionService<T> {
+public class SubscriptionService {
 
-    final CustomerService<T> customerService;
+    final CustomerService customerService;
 
     /**
      * Creates a new subscription for a user with the specified plan and a new payment method token.
@@ -28,7 +29,7 @@ public class SubscriptionService<T> {
      * @return Subscription The created Stripe Subscription object.
      * @throws StripeException If there is an issue with the Stripe API call.
      */
-    public Subscription createSubscriptionWithToken(T userId, String planId, String token, int quantity) throws StripeException {
+    public Subscription createSubscriptionWithToken(UserId userId, String planId, String token, int quantity) throws StripeException {
         String paymentMethodId = customerService.addPaymentMethodToCustomer(userId, token, PaymentMethodCreateParams.Type.CARD).getId();
         return createSubscriptionWithPaymentMethodId(userId, planId, paymentMethodId, quantity);
     }
@@ -43,9 +44,9 @@ public class SubscriptionService<T> {
      * @return Subscription    The Stripe Subscription object that was created.
      * @throws StripeException If there is an issue communicating with the Stripe API.
      */
-    public Subscription createSubscriptionWithPaymentMethodId(T userId, String planId, String paymentMethodId, int quantity) throws StripeException {
+    public Subscription createSubscriptionWithPaymentMethodId(UserId userId, String planId, String paymentMethodId, int quantity) throws StripeException {
 
-        StripeLinkedUser<T> linkedUser = customerService.getOrCreateStripeLinkedUser(userId);
+        StripeLinkedUser linkedUser = customerService.getOrCreateStripeLinkedUser(userId);
 
         customerService.attachPaymentMethodToCustomer(linkedUser.getStripeCustomerId(), paymentMethodId);
 

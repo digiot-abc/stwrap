@@ -8,15 +8,16 @@ import com.stripe.param.PaymentMethodAttachParams;
 import com.stripe.param.PaymentMethodCreateParams;
 import digiot.stwrap.domain.customer.StripeLinkedUserFactory;
 import digiot.stwrap.domain.model.StripeLinkedUser;
+import digiot.stwrap.domain.model.UserId;
 import digiot.stwrap.domain.repository.StripeLinkedUserRepository;
 import lombok.AllArgsConstructor;
 
 import java.util.Optional;
 
 @AllArgsConstructor
-public class CustomerService<T> {
+public class CustomerService {
 
-    final StripeLinkedUserRepository<T> userLinkRepository;
+    final StripeLinkedUserRepository userLinkRepository;
 
     /**
      * Retrieves an existing StripeLinkedUser or creates a new one if it doesn't exist.
@@ -25,7 +26,7 @@ public class CustomerService<T> {
      * @return StripeLinkedUser The retrieved or newly created StripeLinkedUser.
      * @throws StripeException If there is an issue with the Stripe API call.
      */
-    public StripeLinkedUser<T> getOrCreateStripeLinkedUser(T userId) throws StripeException {
+    public StripeLinkedUser getOrCreateStripeLinkedUser(UserId userId) throws StripeException {
         return getOrCreateStripeLinkedUser(userId, null);
     }
 
@@ -37,9 +38,9 @@ public class CustomerService<T> {
      * @return StripeLinkedUser The retrieved or newly created StripeLinkedUser.
      * @throws StripeException If there is an issue with the Stripe API call.
      */
-    public StripeLinkedUser<T> getOrCreateStripeLinkedUser(T userId, String email) throws StripeException {
+    public StripeLinkedUser getOrCreateStripeLinkedUser(UserId userId, String email) throws StripeException {
 
-        Optional<StripeLinkedUser<T>> link = userLinkRepository.findPrimaryByUserId(userId);
+        Optional<StripeLinkedUser> link = userLinkRepository.findPrimaryByUserId(userId);
         
         if (link.isPresent()) {
             return link.get();
@@ -64,11 +65,11 @@ public class CustomerService<T> {
      * @return StripeLinkedUser The newly created StripeLinkedUser representing the link.
      * @throws StripeException If there is an issue with the Stripe API call.
      */
-    public StripeLinkedUser<T> linkStripeCustomer(T userId, Customer customer) throws StripeException {
+    public StripeLinkedUser linkStripeCustomer(UserId userId, Customer customer) throws StripeException {
 
-        StripeLinkedUserFactory<T> linkFactory = new StripeLinkedUserFactory<>();
-        StripeLinkedUser<T> link = linkFactory.create(userId, customer.getId());
-        userLinkRepository.insert(link);
+        StripeLinkedUserFactory linkFactory = new StripeLinkedUserFactory();
+        StripeLinkedUser link = linkFactory.create(userId, customer.getId());
+        userLinkRepository.save(link);
 
         return link;
     }
@@ -82,9 +83,9 @@ public class CustomerService<T> {
      * @return PaymentMethod The Stripe PaymentMethod object that was attached.
      * @throws StripeException If there is an issue with the Stripe API call.
      */
-    public PaymentMethod addPaymentMethodToCustomer(T userId, String token, PaymentMethodCreateParams.Type type) throws StripeException {
+    public PaymentMethod addPaymentMethodToCustomer(UserId userId, String token, PaymentMethodCreateParams.Type type) throws StripeException {
 
-        StripeLinkedUser<T> linkedUser = getOrCreateStripeLinkedUser(userId);
+        StripeLinkedUser linkedUser = getOrCreateStripeLinkedUser(userId);
         Customer customer = Customer.retrieve(linkedUser.getStripeCustomerId());
 
         PaymentMethodCreateParams paymentMethodCreateParams = PaymentMethodCreateParams.builder()
