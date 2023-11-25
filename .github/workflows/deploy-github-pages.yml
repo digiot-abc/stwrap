@@ -3,7 +3,7 @@ name: Deploy Documentation to GitHub Pages
 on:
   push:
     branches:
-      - main  # メインブランチへのプッシュでトリガー
+      - main
 
 jobs:
   deploy:
@@ -11,18 +11,20 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Set up JDK 11
-        uses: actions/setup-java@v1
+      - name: Set up Ruby for Asciidoctor
+        uses: ruby/setup-ruby@v1
         with:
-          java-version: 11
+          ruby-version: '2.7'
+
+      - name: Install Asciidoctor
+        run: gem install asciidoctor asciidoctor-diagram
 
       - name: Extract project version from pom.xml
         run: echo "PROJECT_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)" >> $GITHUB_ENV
 
       - name: Build Asciidoc documentation
-        run: |
-          asciidoctor -r asciidoctor-diagram -b html5 ./docs/*.adoc -D output/v${{ env.PROJECT_VERSION }}
-        
+        run: asciidoctor -r asciidoctor-diagram -b html5 ./docs/*.adoc -D output/v${{ env.PROJECT_VERSION }}
+
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
