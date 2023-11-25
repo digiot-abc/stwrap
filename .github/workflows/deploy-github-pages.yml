@@ -51,14 +51,14 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./output/v${{ env.PROJECT_VERSION }}
-          keep_files: true  # 他のバージョンのファイルを保持する
+          keep_files: true
 
       - name: Generate index page for versions
         run: |
           mkdir -p output/versions
-          echo "<html><head><title>Documentation Versions</title></head><body><h1>Available Versions</h1><ul>" > output/versions/index.html
+          echo "<html><head><title>Stwrap Documentation Versions</title></head><body><h1>Stwrap Available Versions</h1><ul>" > output/versions/index.html
           ls output/ | grep '^v' | sort --version-sort | while read -r version; do
-            echo "<li><a href='../${version}/index.html'>${version}</a></li>" >> output/versions/index.html
+            echo "<li><a href='../${version}'>${version}</a></li>" >> output/versions/index.html
           done
           echo "</ul></body></html>" >> output/versions/index.html
 
@@ -67,5 +67,5 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./output/versions
-          destination_dir: .  # ルートディレクトリにデプロイ
-          keep_files: true  # 以前のファイルを保持する
+          destination_dir: .
+          keep_files: true
