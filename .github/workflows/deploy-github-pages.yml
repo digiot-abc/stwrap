@@ -31,6 +31,8 @@ jobs:
 
       - name: Remove old documentation version
         run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
           if [ -d "v${{ env.PROJECT_VERSION }}" ]; then
             git rm -rf "v${{ env.PROJECT_VERSION }}"
             git commit -m "Remove old docs for v${{ env.PROJECT_VERSION }}"
