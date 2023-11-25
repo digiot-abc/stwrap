@@ -3,18 +3,22 @@ name: Deploy Documentation to GitHub Pages
 on:
   push:
     branches:
-      - main
+      - main  # mainブランチへのプッシュでトリガーされます。
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
 
       - name: Set up JDK 11
-        uses: actions/setup-java@v1
+        uses: actions/setup-java@v2
         with:
           java-version: 11
+          distribution: 'temurin'
 
       - name: Extract project version from pom.xml
         run: echo "PROJECT_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)" >> $GITHUB_ENV
@@ -22,9 +26,24 @@ jobs:
       - name: Build Asciidoc documentation
         run: |
           asciidoctor -r asciidoctor-diagram -b html5 ./docs/*.adoc -D output/v${{ env.PROJECT_VERSION }}
-        
+
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./output/v${{ env.PROJECT_VERSION }}
+          destination_dir: v${{ env.PROJECT_VERSION }}
+
+      - name: Create index page
+        run: |
+          if [ ! -f "index.html" ]; then
+            echo "<html><head><title>Documentation Versions</title></head><body><h1>Available Versions</h1><ul>" > index.html
+            git tag --sort=-v:refname | grep '^v' | while read -r version; do
+              echo "<li><a href='./$version/'>${version}</a></li>" >> index.html
+            done
+            echo "</ul></body></html>" >> index.html
+            git checkout gh-pages
+            git add index.html
+            git commit -m "Update index page with version ${{ env.PROJECT_VERSION }}"
+            git push origin gh-pages
+          fi
