@@ -21,7 +21,7 @@ jobs:
 
       - name: Build Asciidoc documentation
         run: |
-            asciidoctor -r asciidoctor-diagram -b html5 docs/*.adoc -D output/v${{ env.PROJECT_VERSION }}
+          asciidoctor -r asciidoctor-diagram -b html5 ./docs/*.adoc -D output/v${{ env.PROJECT_VERSION }}
         
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
