@@ -58,7 +58,7 @@ jobs:
           mkdir -p output/versions
           echo "<html><head><title>Stwrap Documentation Versions</title></head><body><h1>Stwrap Available Versions</h1><ul>" > output/versions/index.html
           ls output/ | grep '^v' | sort --version-sort | while read -r version; do
-            echo "<li><a href='../${version}'>${version}</a></li>" >> output/versions/index.html
+            echo "<li><a href='../${version}'>${version}/index.html</a></li>" >> output/versions/index.html
           done
           echo "</ul></body></html>" >> output/versions/index.html
 
