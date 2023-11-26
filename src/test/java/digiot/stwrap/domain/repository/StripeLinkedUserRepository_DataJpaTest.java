@@ -1,5 +1,6 @@
 package digiot.stwrap.domain.repository;
 
+import de.huxhorn.sulky.ulid.ULID;
 import digiot.stwrap.SpringBootRunner;
 import digiot.stwrap.domain.model.StripeLinkedUser;
 import digiot.stwrap.domain.model.UserId;
@@ -8,15 +9,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestPropertySource;
 
-@SpringBootTest(classes = SpringBootRunner.class)
-@DataJpaTest
-// @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@TestPropertySource(locations = "classpath:application-test.properties")
+import java.time.LocalDateTime;
+
+@SpringBootTest()
+@TestPropertySource(locations = "classpath:application.properties")
 public class StripeLinkedUserRepository_DataJpaTest {
 
     @Autowired
@@ -26,6 +25,12 @@ public class StripeLinkedUserRepository_DataJpaTest {
     void testUserIdMapping() {
         StripeLinkedUser user = new StripeLinkedUser();
         user.setUserId(UserId.valueOf("testUser"));
+        user.setId(new ULID().nextULID());
+        user.setStripeCustomerId("stripeCustomerId");
+        user.setCreatedAt(LocalDateTime.now());
+        user.setUpdatedAt(LocalDateTime.now());
+        user.setDeleted(false);
+        user.setIsPrimary(true);
     
         // その他の設定...
 

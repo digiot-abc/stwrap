@@ -1,6 +1,7 @@
 package digiot.stwrap.domain.model;
 
 import lombok.Data;
+import org.hibernate.annotations.Type;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
@@ -11,25 +12,25 @@ import java.time.LocalDateTime;
 public class StripeLinkedUser {
 
     @Id
-    @Column(name = "id")
+    @Column(name = "id", length = 32, nullable = false)
     private String id;
 
-    @Convert(converter = UserIdConverter.class)
-    @Column(name = "user_id")
+    @Type(type = "digiot.stwrap.domain.model.UserIdType")
+    @Column(name = "user_id", nullable = false)
     private UserId userId;
 
-    @Column(name = "stripe_customer_id")
+    @Column(name = "stripe_customer_id", nullable = false)
     private String stripeCustomerId;
 
-    @Column(name = "is_primary")
+    @Column(name = "is_primary", nullable = false)
     private Boolean isPrimary;
 
-    @Column(name = "deleted")
+    @Column(name = "deleted", nullable = false)
     private Boolean deleted;
 
-    @Column(name = "created_at")
+    @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "updated_at")
+    @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 }
