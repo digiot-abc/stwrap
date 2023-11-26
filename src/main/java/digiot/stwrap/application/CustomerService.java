@@ -19,6 +19,10 @@ public class CustomerService {
 
     final StripeLinkedUserRepository userLinkRepository;
 
+    public Customer getOrCreate(UserId userId) throws StripeException {
+        return Customer.retrieve(getOrCreateStripeLinkedUser(userId).getStripeCustomerId());
+    }
+
     /**
      * Retrieves an existing StripeLinkedUser or creates a new one if it doesn't exist.
      *
@@ -27,18 +31,6 @@ public class CustomerService {
      * @throws StripeException If there is an issue with the Stripe API call.
      */
     public StripeLinkedUser getOrCreateStripeLinkedUser(UserId userId) throws StripeException {
-        return getOrCreateStripeLinkedUser(userId, null);
-    }
-
-    /**
-     * Retrieves an existing StripeLinkedUser or creates a new one if it doesn't exist for the specified user.
-     *
-     * @param userId The unique identifier of the user within your system.
-     * @param email  The email address associated with the user for the Stripe Customer object.
-     * @return StripeLinkedUser The retrieved or newly created StripeLinkedUser.
-     * @throws StripeException If there is an issue with the Stripe API call.
-     */
-    public StripeLinkedUser getOrCreateStripeLinkedUser(UserId userId, String email) throws StripeException {
 
         Optional<StripeLinkedUser> link = userLinkRepository.findPrimaryByUserId(userId);
         
@@ -47,8 +39,6 @@ public class CustomerService {
         }
 
         CustomerCreateParams params = CustomerCreateParams.builder()
-                .setName(userId.toString())
-                .setEmail(email)
                 .setDescription("Customer for user ID: " + userId)
                 .build();
 
