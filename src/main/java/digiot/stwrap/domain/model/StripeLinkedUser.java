@@ -22,15 +22,15 @@ public class StripeLinkedUser {
     @Column(name = "stripe_customer_id", nullable = false)
     private String stripeCustomerId;
 
-    @Column(name = "is_primary", nullable = false)
+    @Column(name = "is_primary")
     private Boolean isPrimary;
 
-    @Column(name = "deleted", nullable = false)
+    @Column(name = "deleted")
     private Boolean deleted;
 
-    @Column(name = "created_at", nullable = false)
+    @Column(name = "created_at")
     private LocalDateTime createdAt;
 
-    @Column(name = "updated_at", nullable = false)
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 }
