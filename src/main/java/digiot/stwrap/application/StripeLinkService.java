@@ -1,30 +1,29 @@
 package digiot.stwrap.application;
 
-import com.stripe.exception.StripeException;
-import com.stripe.model.Customer;
-import com.stripe.model.PaymentMethod;
-import com.stripe.model.PaymentMethodCollection;
-import com.stripe.model.SetupIntent;
-import com.stripe.param.*;
-import digiot.stwrap.domain.customer.StripeLinkedUserFactory;
-import digiot.stwrap.domain.model.StripeLinkedUser;
-import digiot.stwrap.domain.model.UserId;
-import digiot.stwrap.domain.repository.StripeLinkedUserRepository;
-import lombok.AllArgsConstructor;
-import org.springframework.stereotype.Service;
-
-import java.util.List;
 import java.util.Optional;
 
-@Service
+import org.springframework.stereotype.Service;
+
+import com.stripe.exception.StripeException;
+import com.stripe.model.Customer;
+import com.stripe.model.SetupIntent;
+import com.stripe.param.CustomerCreateParams;
+import com.stripe.param.SetupIntentCreateParams;
+
+import digiot.stwrap.domain.customer.StripeLinkedUserFactory;
+import digiot.stwrap.domain.model.StripeLinkedUser;
+import digiot.stwrap.domain.model.StripeSetupIntent;
+import digiot.stwrap.domain.model.UserId;
+import digiot.stwrap.domain.repository.StripeLinkedUserRepository;
+import digiot.stwrap.domain.repository.StripeSetupIntentRepository;
+import lombok.AllArgsConstructor;
+
 @AllArgsConstructor
-public class CustomerService {
-
+@Service
+public class StripeLinkService {
+    
     final StripeLinkedUserRepository userLinkRepository;
-
-    public Customer getOrCreate(UserId userId) throws StripeException {
-        return Customer.retrieve(getOrCreateStripeLinkedUser(userId).getStripeCustomerId());
-    }
+    final StripeSetupIntentRepository setupIntentRepository;
 
     /**
      * Retrieves an existing StripeLinkedUser or creates a new one if it doesn't exist.
@@ -47,12 +46,6 @@ public class CustomerService {
                 .build();
 
         Customer newCustomer = Customer.create(params);
-    
-        SetupIntentCreateParams setupIntentCreateParams = SetupIntentCreateParams.builder()
-                .setCustomer(newCustomer.getId())
-                .build();
-
-        SetupIntent setupIntent = SetupIntent.create(setupIntentCreateParams);
 
         return linkStripeCustomer(userId, newCustomer);
     }
@@ -69,24 +62,8 @@ public class CustomerService {
 
         StripeLinkedUserFactory linkFactory = new StripeLinkedUserFactory();
         StripeLinkedUser link = linkFactory.create(userId, customer.getId());
-        userLinkRepository.save(link);
+        link = userLinkRepository.save(link);
 
         return link;
     }
-
-    public List<PaymentMethod> listCardPaymentMethods(UserId userId) throws StripeException {
-
-        Customer customer = getOrCreate(userId);
-
-        CustomerListPaymentMethodsParams params =
-                CustomerListPaymentMethodsParams.builder()
-                        .setType(CustomerListPaymentMethodsParams.Type.CARD)
-                        .build();
-
-        PaymentMethodCollection paymentMethods =
-                customer.listPaymentMethods(params);
-
-        return paymentMethods.getData();
-    }
-
 }

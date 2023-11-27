@@ -1,26 +1,20 @@
 package digiot.stwrap.domain.model;
 
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import lombok.Setter;
-import lombok.ToString;
+import javax.persistence.*;
+
 import org.hibernate.annotations.Type;
-import org.hibernate.proxy.HibernateProxy;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.Table;
 import java.time.LocalDateTime;
-import java.util.Objects;
+import java.util.HashSet;
+import java.util.Set;
 
-@Getter
-@Setter
-@ToString
-@RequiredArgsConstructor
 @Entity
 @Table(name = "stripe_linked_user")
-public class StripeLinkedUser {
+@Getter
+@Setter
+public class StripeLinkedUser extends BaseEntity {
 
     @Id
     @Column(name = "id", length = 32, nullable = false)
@@ -42,19 +36,9 @@ public class StripeLinkedUser {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    @Override
-    public final boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null) return false;
-        Class<?> oEffectiveClass = o instanceof HibernateProxy ? ((HibernateProxy) o).getHibernateLazyInitializer().getPersistentClass() : o.getClass();
-        Class<?> thisEffectiveClass = this instanceof HibernateProxy ? ((HibernateProxy) this).getHibernateLazyInitializer().getPersistentClass() : this.getClass();
-        if (thisEffectiveClass != oEffectiveClass) return false;
-        StripeLinkedUser that = (StripeLinkedUser) o;
-        return getId() != null && Objects.equals(getId(), that.getId());
-    }
+    @OneToMany(mappedBy = "stripeLinkedUser", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<StripePaymentIntent> paymentIntents = new HashSet<>();
 
-    @Override
-    public final int hashCode() {
-        return this instanceof HibernateProxy ? ((HibernateProxy) this).getHibernateLazyInitializer().getPersistentClass().hashCode() : getClass().hashCode();
-    }
+    @OneToMany(mappedBy = "stripeLinkedUser", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<StripeSetupIntent> setupIntents = new HashSet<>();
 }

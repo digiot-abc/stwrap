@@ -1,104 +1,91 @@
-package digiot.stwrap.application;
-
 import com.stripe.exception.StripeException;
 import com.stripe.model.Customer;
 import com.stripe.model.PaymentMethod;
 import com.stripe.model.SetupIntent;
-import com.stripe.param.CustomerUpdateParams;
 import com.stripe.param.PaymentMethodAttachParams;
 import com.stripe.param.PaymentMethodCreateParams;
 import com.stripe.param.SetupIntentCreateParams;
+
+import digiot.stwrap.domain.model.StripeLinkedUser;
+import digiot.stwrap.domain.model.StripeSetupIntent;
 import digiot.stwrap.domain.model.UserId;
+import digiot.stwrap.domain.repository.StripeSetupIntentRepository;
 import lombok.AllArgsConstructor;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+/**
+ * Service class for handling payment related operations with Stripe API.
+ */
 @Service
 @AllArgsConstructor
 public class PaymentService {
 
-    final CustomerService customerService;
-
-    public SetupIntent createSetupIntentWithPaymentMethod(UserId userId, String token) throws Exception {
-
-        // SetupIntentの作成パラメーターを設定
-        SetupIntentCreateParams params = SetupIntentCreateParams.builder()
-                .setCustomer(customerService.getOrCreate(userId).getId())
-                .setPaymentMethod(createPaymentMethod(token, PaymentMethodCreateParams.Type.CARD).getId())
-                .build();
-
-        // SetupIntentを作成
-        return SetupIntent.create(params);
-    }
-
-    public PaymentMethod createPaymentMethod(String token, PaymentMethodCreateParams.Type type) throws StripeException {
-
-        PaymentMethodCreateParams params = PaymentMethodCreateParams.builder()
-                .setType(type)
-                .setCard(PaymentMethodCreateParams.Token.builder()
-                        .setToken(token)
-                        .build())
-                .build();
-
-        return PaymentMethod.create(params);
-    }
+    private final CustomerService customerService;
+    private final StripeSetupIntentRepository setupIntentRepository;
 
     /**
-     * Updates the default payment method for the Stripe customer associated with the given user ID.
-     * This method sets a new default payment source using the provided token.
+     * Creates and attaches a new payment method to the customer based on the provided token.
      *
-     * @param userId The ID of the user within your system.
-     * @param token  The token representing the payment method to be set as the default.
-     * @return String The ID of the default payment source after the update.
-     * @throws StripeException If there is an issue with the Stripe API call.
+     * @param userId The user ID to associate the payment method with.
+     * @param token  The token representing the payment information.
+     * @return The newly created PaymentMethod.
+     * @throws StripeException If an error occurs with the Stripe API call.
      */
-    public PaymentMethod attachPaymentMethodToCustomerFromToken(UserId userId, String token, PaymentMethodCreateParams.Type type) throws StripeException {
-        return attachPaymentMethodToCustomerFromToken(userId, token, type, false);
-    }
-
-    public PaymentMethod attachPaymentMethodToCustomerFromToken(UserId userId, String token) throws StripeException {
-        return attachPaymentMethodToCustomerFromToken(userId, token, false);
-    }
-
-    public PaymentMethod attachPaymentMethodToCustomerFromToken(UserId userId, String token, boolean defaultPaymentMethod) throws StripeException {
-        return attachPaymentMethodToCustomerFromToken(userId, token, PaymentMethodCreateParams.Type.CARD, defaultPaymentMethod);
-    }
-
-    public PaymentMethod attachPaymentMethodToCustomerFromToken(UserId userId, String token, PaymentMethodCreateParams.Type type, boolean defaultPaymentMethod) throws StripeException {
-        PaymentMethod paymentMethod = createPaymentMethod(token, type);
-        attachPaymentMethodToCustomer(userId, paymentMethod.getId(), defaultPaymentMethod);
+    public PaymentMethod createAndAttachPaymentMethod(UserId userId, String token) throws StripeException {
+        PaymentMethod paymentMethod = createPaymentMethod(token);
+        attachPaymentMethodToCustomer(userId, paymentMethod.getId());
         return paymentMethod;
     }
 
-    public void attachPaymentMethodToCustomer(UserId userId, String paymentMethodId) throws StripeException {
-        attachPaymentMethodToCustomer(userId, paymentMethodId, false);
+    /**
+     * Creates a SetupIntent for the specified user. This is used for setting up a payment method for future use.
+     *
+     * @param userId The user ID for whom the SetupIntent is being created.
+     * @return The newly created SetupIntent.
+     * @throws StripeException If an error occurs with the Stripe API call.
+     */
+    public SetupIntent createSetupIntentForUser(UserId userId) throws StripeException {
+        StripeLinkedUser linkedUser = customerService.getOrCreateStripeLinkedUser(userId);
+        SetupIntent setupIntent = createSetupIntent(linkedUser.getStripeCustomerId());
+        saveSetupIntent(setupIntent, linkedUser);
+        return setupIntent;
     }
 
-    public void attachPaymentMethodToCustomer(UserId userId, String paymentMethodId, boolean defaultPaymentMethod) throws StripeException {
-
+    /**
+     * Attaches a PaymentMethod to the specified customer.
+     *
+     * @param userId           The user ID of the customer.
+     * @param paymentMethodId  The ID of the PaymentMethod to attach.
+     * @throws StripeException If an error occurs with the Stripe API call.
+     */
+    public void attachPaymentMethodToCustomer(UserId userId, String paymentMethodId) throws StripeException {
         Customer customer = customerService.getOrCreate(userId);
-
-        // Retrieve the specified Payment Method from Stripe.
         PaymentMethod paymentMethod = PaymentMethod.retrieve(paymentMethodId);
+        paymentMethod.attach(PaymentMethodAttachParams.builder().setCustomer(customer.getId()).build());
+    }
 
-        // Check if the Payment Method is already attached to the specified customer.
-        if (paymentMethod.getCustomer() != null && paymentMethod.getCustomer().equals(customer.getId())) {
-            // The Payment Method is already attached to this customer, so no action is needed.
-            return;
-        }
+    // Helper methods below
 
-        // Prepare the parameters to attach the Payment Method to the customer.
-        PaymentMethodAttachParams attachParams = PaymentMethodAttachParams.builder()
-                .setCustomer(customer.getId())
+    private PaymentMethod createPaymentMethod(String token) throws StripeException {
+        PaymentMethodCreateParams params = PaymentMethodCreateParams.builder()
+                .setType(PaymentMethodCreateParams.Type.CARD)
+                .setCard(PaymentMethodCreateParams.Card.builder().setToken(token).build())
                 .build();
+        return PaymentMethod.create(params);
+    }
 
-        // Attach the Payment Method to the customer.
-        paymentMethod.attach(attachParams);
+    private SetupIntent createSetupIntent(String customerId) throws StripeException {
+        SetupIntentCreateParams params = SetupIntentCreateParams.builder().setCustomer(customerId).build();
+        return SetupIntent.create(params);
+    }
 
-        if (defaultPaymentMethod) {
-            CustomerUpdateParams customerUpdateParams =
-                    CustomerUpdateParams.builder()
-                            .setSource(paymentMethodId).build();
-            customer.update(customerUpdateParams);
-        }
+    private void saveSetupIntent(SetupIntent setupIntent, StripeLinkedUser linkedUser) {
+        StripeSetupIntent setupIntentEntity = new StripeSetupIntent();
+        setupIntentEntity.setId(setupIntent.getId());
+        setupIntentEntity.setStripeLinkedUser(linkedUser);
+        setupIntentEntity.setStatus(setupIntent.getStatus());
+        setupIntentRepository.save(setupIntentEntity);
     }
 }
