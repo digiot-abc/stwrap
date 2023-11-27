@@ -10,12 +10,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 
 import java.time.LocalDateTime;
 
-@SpringBootTest()
-@TestPropertySource(locations = "classpath:application.properties")
+@ActiveProfiles("test")
+@SpringBootTest(classes = SpringBootRunner.class)
+@TestPropertySource(locations = "classpath:application-test.properties")
 public class StripeLinkedUserRepository_DataJpaTest {
 
     @Autowired

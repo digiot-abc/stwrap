@@ -18,7 +18,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class TestStripeLinkedUserRepositoryDefault {
+class DefaultStripeLinkedUserRepositoryTest {
 
     private StripeLinkedUserRepository repository;
 
@@ -101,7 +101,7 @@ class TestStripeLinkedUserRepositoryDefault {
         assertEquals(2, count);
     }
 
-    private StripeLinkedUser createTestUser(String id, String userId, String stripeCustomerId, boolean isPrimary, boolean deleted) {
+    private StripeLinkedUser createTestUser(String id, Object userId, String stripeCustomerId, boolean isPrimary, boolean deleted) {
         StripeLinkedUser user = new StripeLinkedUser();
         user.setId(id);
         user.setUserId(UserId.valueOf(userId));

@@ -1,8 +1,12 @@
 package digiot.stwrap.domain.model;
 
+import lombok.Getter;
 import org.hibernate.HibernateException;
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
 import org.hibernate.usertype.UserType;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 import java.io.Serializable;
 import java.sql.PreparedStatement;
@@ -14,7 +18,7 @@ public class UserIdType implements UserType {
 
   @Override
   public int[] sqlTypes() {
-    return new int[] { Types.OTHER };
+    return new int[] { Types.VARCHAR };
   }
 
   @Override
@@ -46,9 +50,8 @@ public class UserIdType implements UserType {
   public void nullSafeSet(PreparedStatement st, Object value, int index, SharedSessionContractImplementor session)
       throws HibernateException, SQLException {
     if (value == null) {
-      st.setNull(index, Types.OTHER); // JDBCのOTHER型を使用
+      st.setNull(index, Types.OTHER);
     } else {
-      // setObjectの第3引数を省略して、JDBCに型推測を任せる
       st.setObject(index, ((UserId) value).getValue());
     }
   }
@@ -63,7 +66,7 @@ public class UserIdType implements UserType {
 
   @Override
   public boolean isMutable() {
-    return false; // UserIdは不変オブジェクトとして扱います
+    return false;
   }
 
   @Override

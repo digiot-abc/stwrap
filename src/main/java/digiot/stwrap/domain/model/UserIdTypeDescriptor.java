@@ -1,12 +1,9 @@
 package digiot.stwrap.domain.model;
 
-import digiot.stwrap.domain.model.UserId;
 import org.hibernate.type.descriptor.java.AbstractTypeDescriptor;
 import org.hibernate.type.descriptor.WrapperOptions;
 
 public class UserIdTypeDescriptor extends AbstractTypeDescriptor<UserId> {
-
-  public static final UserIdTypeDescriptor INSTANCE = new UserIdTypeDescriptor();
 
   public UserIdTypeDescriptor() {
     super(UserId.class);
@@ -14,7 +11,7 @@ public class UserIdTypeDescriptor extends AbstractTypeDescriptor<UserId> {
 
   @Override
   public String toString(UserId value) {
-    return value == null ? null : value.getValue().toString();
+    return value == null ? null : value.toString();
   }
 
   @Override
