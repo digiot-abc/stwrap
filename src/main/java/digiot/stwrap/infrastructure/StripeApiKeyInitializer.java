@@ -1,6 +1,7 @@
 package digiot.stwrap.infrastructure;
 
 import com.stripe.Stripe;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 
 import java.util.Optional;
 

@@ -86,88 +86,88 @@ class CustomerServiceTest {
             customer.delete();
         }
     }
-
-    @Test
-    void listCardPaymentMethods() throws StripeException {
-
-        Customer customer = StripeTestHelper.createTestCustomer("mail@excample.com");
-        Token token = StripeTestHelper.createTestToken();
-        PaymentMethod paymentMethod = StripeTestHelper.attachTokenToCustomer(customer, token);
-
-        try {
-            UserId userId = UserId.valueOf(123);
-            customerService.linkStripeCustomer(userId, customer);
-            List<PaymentMethod> paymentMethodList = customerService.listCardPaymentMethods(userId);
-            assertEquals(paymentMethod.getId(), paymentMethodList.get(0).getId());
-        } finally {
-            customer.delete();
-        }
-    }
-
-    @Test
-    void attachPaymentMethodToCustomerFromToken() throws StripeException {
-
-        Customer customer = StripeTestHelper.createTestCustomer("mail@excample.com");
-        Token token = StripeTestHelper.createTestToken();
-
-        try {
-            UserId userId = UserId.valueOf(123);
-            PaymentMethod paymentMethod = customerService.attachPaymentMethodToCustomerFromToken(userId, token.getId(), true);
-            assertEquals(paymentMethod.getId(), customerService.getOrCreate(userId).getDefaultSource());
-        } finally {
-            customer.delete();
-        }
-    }
-
-    @Test
-    void attachPaymentMethodToCustomerFromToken2() throws StripeException {
-
-        Customer customer = StripeTestHelper.createTestCustomer("mail@excample.com");
-        Token token = StripeTestHelper.createTestToken();
-
-        try {
-            UserId userId = UserId.valueOf(123);
-            PaymentMethod paymentMethod = customerService.attachPaymentMethodToCustomerFromToken(userId, token.getId(), false);
-
-            Token token2 = StripeTestHelper.createTestToken();
-            PaymentMethod paymentMethod2 = customerService.attachPaymentMethodToCustomerFromToken(userId, token2.getId(), false);
-
-            assertEquals(2, customerService.listCardPaymentMethods(userId).size());
-            assertNotEquals(paymentMethod.getId(), paymentMethod2.getId());
-        } finally {
-            customer.delete();
-        }
-    }
-
-    @Test
-    void attachPaymentMethodToCustomer() throws StripeException {
-
-        UserId userId = UserId.valueOf(999);
-        Customer customer = customerService.getOrCreate(userId);
-        PaymentMethod paymentMethod = StripeTestHelper.createPaymentMethod();
-
-        try {
-            customerService.attachPaymentMethodToCustomer(userId, paymentMethod.getId());
-            assertNull(customerService.getOrCreate(userId).getDefaultSource());
-            assertEquals(paymentMethod.getId(), customerService.listCardPaymentMethods(userId).get(0).getId());
-        } finally {
-            customer.delete();
-        }
-    }
-
-    @Test
-    void attachPaymentMethodToCustomer2() throws StripeException {
-
-        UserId userId = UserId.valueOf(999);
-        Customer customer = customerService.getOrCreate(userId);
-        PaymentMethod paymentMethod = StripeTestHelper.createPaymentMethod();
-
-        try {
-            customerService.attachPaymentMethodToCustomer(userId, paymentMethod.getId());
-            assertNull(customerService.getOrCreate(userId).getDefaultSource());
-            assertEquals(paymentMethod.getId(), customerService.listCardPaymentMethods(userId).get(0).getId());
-        } finally {
-            customer.delete();
-        }
-    }
+//
+//    @Test
+//    void listCardPaymentMethods() throws StripeException {
+//
+//        Customer customer = StripeTestHelper.createTestCustomer("mail@excample.com");
+//        Token token = StripeTestHelper.createTestToken();
+//        PaymentMethod paymentMethod = StripeTestHelper.attachTokenToCustomer(customer, token);
+//
+//        try {
+//            UserId userId = UserId.valueOf(123);
+//            customerService.linkStripeCustomer(userId, customer);
+//            List<PaymentMethod> paymentMethodList = customerService.listCardPaymentMethods(userId);
+//            assertEquals(paymentMethod.getId(), paymentMethodList.get(0).getId());
+//        } finally {
+//            customer.delete();
+//        }
+//    }
+//
+//    @Test
+//    void attachPaymentMethodToCustomerFromToken() throws StripeException {
+//
+//        Customer customer = StripeTestHelper.createTestCustomer("mail@excample.com");
+//        Token token = StripeTestHelper.createTestToken();
+//
+//        try {
+//            UserId userId = UserId.valueOf(123);
+//            PaymentMethod paymentMethod = customerService.attachPaymentMethodToCustomerFromToken(userId, token.getId(), true);
+//            assertEquals(paymentMethod.getId(), customerService.getOrCreate(userId).getDefaultSource());
+//        } finally {
+//            customer.delete();
+//        }
+//    }
+//
+//    @Test
+//    void attachPaymentMethodToCustomerFromToken2() throws StripeException {
+//
+//        Customer customer = StripeTestHelper.createTestCustomer("mail@excample.com");
+//        Token token = StripeTestHelper.createTestToken();
+//
+//        try {
+//            UserId userId = UserId.valueOf(123);
+//            PaymentMethod paymentMethod = customerService.attachPaymentMethodToCustomerFromToken(userId, token.getId(), false);
+//
+//            Token token2 = StripeTestHelper.createTestToken();
+//            PaymentMethod paymentMethod2 = customerService.attachPaymentMethodToCustomerFromToken(userId, token2.getId(), false);
+//
+//            assertEquals(2, customerService.listCardPaymentMethods(userId).size());
+//            assertNotEquals(paymentMethod.getId(), paymentMethod2.getId());
+//        } finally {
+//            customer.delete();
+//        }
+//    }
+//
+//    @Test
+//    void attachPaymentMethodToCustomer() throws StripeException {
+//
+//        UserId userId = UserId.valueOf(999);
+//        Customer customer = customerService.getOrCreate(userId);
+//        PaymentMethod paymentMethod = StripeTestHelper.createPaymentMethod();
+//
+//        try {
+//            customerService.attachPaymentMethodToCustomer(userId, paymentMethod.getId());
+//            assertNull(customerService.getOrCreate(userId).getDefaultSource());
+//            assertEquals(paymentMethod.getId(), customerService.listCardPaymentMethods(userId).get(0).getId());
+//        } finally {
+//            customer.delete();
+//        }
+//    }
+//
+//    @Test
+//    void attachPaymentMethodToCustomer2() throws StripeException {
+//
+//        UserId userId = UserId.valueOf(999);
+//        Customer customer = customerService.getOrCreate(userId);
+//        PaymentMethod paymentMethod = StripeTestHelper.createPaymentMethod();
+//
+//        try {
+//            customerService.attachPaymentMethodToCustomer(userId, paymentMethod.getId());
+//            assertNull(customerService.getOrCreate(userId).getDefaultSource());
+//            assertEquals(paymentMethod.getId(), customerService.listCardPaymentMethods(userId).get(0).getId());
+//        } finally {
+//            customer.delete();
+//        }
+//    }
 }

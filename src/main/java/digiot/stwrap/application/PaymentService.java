@@ -1,11 +1,16 @@
+package digiot.stwrap.application;
+
 import com.stripe.exception.StripeException;
 import com.stripe.model.Customer;
 import com.stripe.model.PaymentMethod;
+import com.stripe.model.PaymentMethodCollection;
 import com.stripe.model.SetupIntent;
+import com.stripe.param.CustomerListPaymentMethodsParams;
 import com.stripe.param.PaymentMethodAttachParams;
 import com.stripe.param.PaymentMethodCreateParams;
 import com.stripe.param.SetupIntentCreateParams;
 
+import digiot.stwrap.application.CustomerService;
 import digiot.stwrap.domain.model.StripeLinkedUser;
 import digiot.stwrap.domain.model.StripeSetupIntent;
 import digiot.stwrap.domain.model.UserId;
@@ -14,6 +19,8 @@ import lombok.AllArgsConstructor;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 /**
  * Service class for handling payment related operations with Stripe API.
@@ -66,13 +73,30 @@ public class PaymentService {
         paymentMethod.attach(PaymentMethodAttachParams.builder().setCustomer(customer.getId()).build());
     }
 
+    public List<PaymentMethod> listCardPaymentMethods(UserId userId) throws StripeException {
+
+        Customer customer = customerService.getOrCreate(userId);
+
+        CustomerListPaymentMethodsParams params =
+            CustomerListPaymentMethodsParams.builder()
+                .setType(CustomerListPaymentMethodsParams.Type.CARD)
+                .build();
+
+        PaymentMethodCollection paymentMethods =
+            customer.listPaymentMethods(params);
+
+        return paymentMethods.getData();
+    }
+
     // Helper methods below
 
     private PaymentMethod createPaymentMethod(String token) throws StripeException {
         PaymentMethodCreateParams params = PaymentMethodCreateParams.builder()
-                .setType(PaymentMethodCreateParams.Type.CARD)
-                .setCard(PaymentMethodCreateParams.Card.builder().setToken(token).build())
-                .build();
+            .setType(PaymentMethodCreateParams.Type.CARD)
+            .setCard(PaymentMethodCreateParams.Token.builder()
+                .setToken(token)
+                .build())
+            .build();
         return PaymentMethod.create(params);
     }
 

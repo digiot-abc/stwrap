@@ -74,19 +74,4 @@ public class CustomerService {
         return link;
     }
 
-    public List<PaymentMethod> listCardPaymentMethods(UserId userId) throws StripeException {
-
-        Customer customer = getOrCreate(userId);
-
-        CustomerListPaymentMethodsParams params =
-                CustomerListPaymentMethodsParams.builder()
-                        .setType(CustomerListPaymentMethodsParams.Type.CARD)
-                        .build();
-
-        PaymentMethodCollection paymentMethods =
-                customer.listPaymentMethods(params);
-
-        return paymentMethods.getData();
-    }
-
 }
