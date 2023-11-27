@@ -3,17 +3,19 @@ package digiot.stwrap.application;
 import com.stripe.exception.StripeException;
 import com.stripe.model.Customer;
 import com.stripe.model.PaymentMethod;
-import com.stripe.param.CustomerCreateParams;
-import com.stripe.param.PaymentMethodAttachParams;
-import com.stripe.param.PaymentMethodCreateParams;
+import com.stripe.model.PaymentMethodCollection;
+import com.stripe.param.*;
 import digiot.stwrap.domain.customer.StripeLinkedUserFactory;
 import digiot.stwrap.domain.model.StripeLinkedUser;
 import digiot.stwrap.domain.model.UserId;
 import digiot.stwrap.domain.repository.StripeLinkedUserRepository;
 import lombok.AllArgsConstructor;
+import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Optional;
 
+@Service
 @AllArgsConstructor
 public class CustomerService {
 
@@ -32,14 +34,15 @@ public class CustomerService {
      */
     public StripeLinkedUser getOrCreateStripeLinkedUser(UserId userId) throws StripeException {
 
-        Optional<StripeLinkedUser> link = userLinkRepository.findPrimaryByUserId(userId);
+        Optional<StripeLinkedUser> link = userLinkRepository.findByUserId(userId);
         
         if (link.isPresent()) {
             return link.get();
         }
 
         CustomerCreateParams params = CustomerCreateParams.builder()
-                .setDescription("Customer for user ID: " + userId)
+                .setName(userId.toString())
+                .setDescription("Customer for user ID: " + userId.getValue())
                 .build();
 
         Customer newCustomer = Customer.create(params);
@@ -64,55 +67,19 @@ public class CustomerService {
         return link;
     }
 
-    /**
-     * Adds a new payment method to the Stripe customer associated with the given user ID.
-     *
-     * @param userId The ID of the user within your system.
-     * @param token  The token representing the payment method to be added.
-     * @param type   The type of the payment method (e.g., PaymentMethodCreateParams.Type.CARD).
-     * @return PaymentMethod The Stripe PaymentMethod object that was attached.
-     * @throws StripeException If there is an issue with the Stripe API call.
-     */
-    public PaymentMethod addPaymentMethodToCustomer(UserId userId, String token, PaymentMethodCreateParams.Type type) throws StripeException {
+    public List<PaymentMethod> listCardPaymentMethods(UserId userId) throws StripeException {
 
-        StripeLinkedUser linkedUser = getOrCreateStripeLinkedUser(userId);
-        Customer customer = Customer.retrieve(linkedUser.getStripeCustomerId());
+        Customer customer = getOrCreate(userId);
 
-        PaymentMethodCreateParams paymentMethodCreateParams = PaymentMethodCreateParams.builder()
-                .setType(type)
-                .setCard(PaymentMethodCreateParams.Token.builder().setToken(token).build())
-                .build();
-        PaymentMethod paymentMethod = PaymentMethod.create(paymentMethodCreateParams);
-        attachPaymentMethodToCustomer(customer.getId(), paymentMethod.getId());
+        CustomerListPaymentMethodsParams params =
+                CustomerListPaymentMethodsParams.builder()
+                        .setType(CustomerListPaymentMethodsParams.Type.CARD)
+                        .build();
 
-        return PaymentMethod.retrieve(customer.getDefaultSource());
+        PaymentMethodCollection paymentMethods =
+                customer.listPaymentMethods(params);
+
+        return paymentMethods.getData();
     }
 
-    /**
-     * Attaches a specified Payment Method to a given customer in Stripe if it is not already attached.
-     *
-     * @param customerId      The unique identifier of the customer in Stripe.
-     * @param paymentMethodId The unique identifier of the Payment Method to attach.
-     * @throws StripeException If the Payment Method is already attached to a customer or
-     *                         if there is an error during the API request to Stripe.
-     */
-    public void attachPaymentMethodToCustomer(String customerId, String paymentMethodId) throws StripeException {
-
-        // Retrieve the specified Payment Method from Stripe.
-        PaymentMethod paymentMethod = PaymentMethod.retrieve(paymentMethodId);
-
-        // Check if the Payment Method is already attached to the specified customer.
-        if (paymentMethod.getCustomer() != null && paymentMethod.getCustomer().equals(customerId)) {
-            // The Payment Method is already attached to this customer, so no action is needed.
-            return;
-        }
-
-        // Prepare the parameters to attach the Payment Method to the customer.
-        PaymentMethodAttachParams attachParams = PaymentMethodAttachParams.builder()
-                .setCustomer(customerId)
-                .build();
-
-        // Attach the Payment Method to the customer.
-        paymentMethod.attach(attachParams);
-    }
 }

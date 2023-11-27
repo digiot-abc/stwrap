@@ -3,6 +3,7 @@ package digiot.stwrap.infrastructure.helper;
 import com.stripe.exception.StripeException;
 import com.stripe.model.*;
 import com.stripe.param.CustomerUpdateParams;
+import com.stripe.param.PaymentMethodCreateParams;
 import com.stripe.param.SubscriptionCreateParams;
 
 import java.util.ArrayList;
@@ -19,6 +20,18 @@ public class StripeTestHelper {
     private static final List<Coupon> createdCoupons = new ArrayList<>();
     private static final List<PaymentMethod> createdPaymentMethods = new ArrayList<>();
 
+    public static PaymentMethod createPaymentMethod() throws StripeException {
+
+        PaymentMethodCreateParams params = PaymentMethodCreateParams.builder()
+                .setType(PaymentMethodCreateParams.Type.CARD)
+                .setCard(PaymentMethodCreateParams.Token.builder()
+                        .setToken(createTestToken().getId())
+                        .build())
+                .build();
+
+        return PaymentMethod.create(params);
+    }
+
     public static Customer createTestCustomer(String email) throws StripeException {
         Map<String, Object> customerParams = new HashMap<>();
         customerParams.put("email", email);
@@ -31,7 +44,6 @@ public class StripeTestHelper {
         return Token.retrieve("tok_visa");
     }
 
-    // テスト実施不可
     public static PaymentMethod attachTokenToCustomer(Customer customer, Token token) throws StripeException {
 
         CustomerUpdateParams customerUpdateParams = CustomerUpdateParams.builder()

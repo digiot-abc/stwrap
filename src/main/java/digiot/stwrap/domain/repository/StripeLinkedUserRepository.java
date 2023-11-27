@@ -5,7 +5,6 @@ import digiot.stwrap.domain.model.UserId;
 import org.springframework.data.repository.PagingAndSortingRepository;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
 import java.util.Optional;
 
 /**
@@ -21,21 +20,5 @@ public interface StripeLinkedUserRepository extends PagingAndSortingRepository<S
      * @param userId The unique identifier of the user.
      * @return The latest StripeLinkedUser associated with the user ID, or an empty Optional if no active link exists.
      */
-    Optional<StripeLinkedUser> findPrimaryByUserId(UserId userId);
-
-    /**
-     * Finds all Stripe customer ID links associated with a given user ID.
-     *
-     * @param userId The unique identifier of the user.
-     * @return A list of StripeLinkedUser objects associated with the user ID.
-     */
-    List<StripeLinkedUser> findAllLinksByUserId(UserId userId);
-
-    /**
-     * Finds the latest Stripe customer ID link associated with a given user ID.
-     *
-     * @param userId The unique identifier of the user.
-     * @return The latest StripeLinkedUser associated with the user ID, or an empty Optional if no active link exists.
-     */
-    Optional<StripeLinkedUser> findLatestLinkByUserId(UserId userId);
+    Optional<StripeLinkedUser> findByUserId(UserId userId);
 }

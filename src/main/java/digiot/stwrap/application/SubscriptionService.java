@@ -3,16 +3,14 @@ package digiot.stwrap.application;
 import com.stripe.exception.StripeException;
 import com.stripe.model.Subscription;
 import com.stripe.param.PaymentMethodCreateParams;
+import com.stripe.param.SubscriptionCreateParams;
 import com.stripe.param.SubscriptionUpdateParams;
 import digiot.stwrap.domain.model.StripeLinkedUser;
 import digiot.stwrap.domain.model.UserId;
-import digiot.stwrap.domain.subscription.SubscriptionItemFactory;
 import lombok.AllArgsConstructor;
 
 import java.time.Instant;
 import java.time.OffsetDateTime;
-import java.util.HashMap;
-import java.util.Map;
 
 @AllArgsConstructor
 public class SubscriptionService {
@@ -29,8 +27,8 @@ public class SubscriptionService {
      * @return Subscription The created Stripe Subscription object.
      * @throws StripeException If there is an issue with the Stripe API call.
      */
-    public Subscription createSubscriptionWithToken(UserId userId, String planId, String token, int quantity) throws StripeException {
-        String paymentMethodId = customerService.addPaymentMethodToCustomer(userId, token, PaymentMethodCreateParams.Type.CARD).getId();
+    public Subscription createSubscriptionWithToken(UserId userId, String planId, String token, long quantity) throws StripeException {
+        String paymentMethodId = customerService.attachPaymentMethodToCustomerFromToken(userId, token, PaymentMethodCreateParams.Type.CARD, false).getId();
         return createSubscriptionWithPaymentMethodId(userId, planId, paymentMethodId, quantity);
     }
 
@@ -44,16 +42,18 @@ public class SubscriptionService {
      * @return Subscription    The Stripe Subscription object that was created.
      * @throws StripeException If there is an issue communicating with the Stripe API.
      */
-    public Subscription createSubscriptionWithPaymentMethodId(UserId userId, String planId, String paymentMethodId, int quantity) throws StripeException {
+    public Subscription createSubscriptionWithPaymentMethodId(UserId userId, String planId, String paymentMethodId, long quantity) throws StripeException {
 
         StripeLinkedUser linkedUser = customerService.getOrCreateStripeLinkedUser(userId);
 
-        customerService.attachPaymentMethodToCustomer(linkedUser.getStripeCustomerId(), paymentMethodId);
+        customerService.attachPaymentMethodToCustomer(linkedUser.getUserId(), paymentMethodId);
 
-        Map<String, Object> subscriptionParams = new HashMap<>();
-        subscriptionParams.put("customer", linkedUser.getStripeCustomerId());
-        subscriptionParams.put("items", SubscriptionItemFactory.createSubscriptionItem(planId, quantity));
-        subscriptionParams.put("default_payment_method", paymentMethodId);
+        SubscriptionCreateParams subscriptionParams = SubscriptionCreateParams.builder()
+                .setCustomer(linkedUser.getStripeCustomerId())
+                .setDefaultPaymentMethod(paymentMethodId)
+                .addItem(SubscriptionCreateParams.Item.builder().setPlan(planId).setQuantity(quantity).build())
+                .build();
+
 
         return Subscription.create(subscriptionParams);
     }

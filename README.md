@@ -58,7 +58,6 @@ CREATE INDEX idx_user_stripe_link_stripe_customer_id ON user_stripe_link (stripe
 ```java
 import com.stripe.Stripe;
 import digiot.stwrap.application.CustomerService;
-import digiot.stwrap.application.SubscriptionService;
 import digiot.stwrap.domain.model.UserId;
 import digiot.stwrap.domain.repository.StripeLinkedUserRepository;
 

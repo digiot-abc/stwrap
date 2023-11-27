@@ -2,7 +2,7 @@
 CREATE TABLE IF NOT EXISTS stripe_linked_user
 (
     id                 VARCHAR(32) PRIMARY KEY,
-    user_id            VARCHAR(255) NOT NULL,
+    user_id            INT NOT NULL,
     stripe_customer_id VARCHAR(255) NOT NULL,
     deleted         BOOLEAN   DEFAULT FALSE,
     created_at         TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

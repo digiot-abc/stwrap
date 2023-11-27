@@ -50,24 +50,19 @@ public class DataSourceProvider {
     }
 
     private static void setPropertyAsString(Consumer<String> setterMethod, String propertyName) {
-        String propertyValue = PropertiesLoader.getProperty(propertyName);
-        if (propertyValue != null) {
-            setterMethod.accept(propertyValue);
-        }
+        PropertiesLoader.getSafeProperty(propertyName).ifPresent(setterMethod);
     }
 
     private static void setPropertyAsLong(Consumer<Long> setterMethod, String propertyName) {
-        String propertyValue = PropertiesLoader.getProperty(propertyName);
-        if (propertyValue != null) {
-            setterMethod.accept(Long.parseLong(propertyValue));
-        }
+        PropertiesLoader.getSafeProperty(propertyName).ifPresent(p -> {
+            setterMethod.accept(Long.parseLong(p));
+        });
     }
 
     private static void setPropertyAsInt(Consumer<Integer> setterMethod, String propertyName) {
-        String propertyValue = PropertiesLoader.getProperty(propertyName);
-        if (propertyValue != null) {
-            setterMethod.accept(Integer.parseInt(propertyValue));
-        }
+        PropertiesLoader.getSafeProperty(propertyName).ifPresent(p -> {
+            setterMethod.accept(Integer.parseInt(p));
+        });
     }
 
 }

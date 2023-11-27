@@ -32,7 +32,6 @@ class DefaultStripeLinkedUserRepositoryTest {
                     "id VARCHAR(255) PRIMARY KEY," +
                     "user_id VARCHAR(255)," +
                     "stripe_customer_id VARCHAR(255)," +
-                    "is_primary BOOLEAN," +
                     "deleted BOOLEAN," +
                     "created_at TIMESTAMP," +
                     "updated_at TIMESTAMP" +
@@ -56,7 +55,7 @@ class DefaultStripeLinkedUserRepositoryTest {
         StripeLinkedUser user = createTestUser("1", "user1", "cust1", true, false);
         assertEquals("1", repository.save(user).getId());
 
-        Optional<StripeLinkedUser> foundUser = repository.findPrimaryByUserId(UserId.valueOf("user1"));
+        Optional<StripeLinkedUser> foundUser = repository.findByUserId(UserId.valueOf("user1"));
         assertTrue(foundUser.isPresent());
         assertEquals("cust1", foundUser.get().getStripeCustomerId());
     }
@@ -106,7 +105,6 @@ class DefaultStripeLinkedUserRepositoryTest {
         user.setId(id);
         user.setUserId(UserId.valueOf(userId));
         user.setStripeCustomerId(stripeCustomerId);
-        user.setIsPrimary(isPrimary);
         user.setDeleted(deleted);
         user.setCreatedAt(LocalDateTime.now());
         user.setUpdatedAt(LocalDateTime.now());

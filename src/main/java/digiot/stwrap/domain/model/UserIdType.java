@@ -1,12 +1,10 @@
 package digiot.stwrap.domain.model;
 
-import lombok.Getter;
+import digiot.stwrap.infrastructure.PropertiesLoader;
+import lombok.extern.slf4j.Slf4j;
 import org.hibernate.HibernateException;
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
 import org.hibernate.usertype.UserType;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 import java.io.Serializable;
 import java.sql.PreparedStatement;
@@ -14,11 +12,42 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
 
+@Slf4j
 public class UserIdType implements UserType {
+
+  private final int sqlType;
+
+  public UserIdType() {
+
+    String sqlType = PropertiesLoader.getSafeProperty("stwrap.user-id.sql-type")
+            .orElseGet(() -> {
+              log.warn("The SQL type for 'userId' was not specified; using default type 'VARCHAR'.");
+              return "VARCHAR";
+            })
+            .toLowerCase();
+
+    switch (sqlType) {
+      case "varchar": {
+        this.sqlType = Types.VARCHAR;
+        break;
+      }
+      case "int": {
+        this.sqlType = Types.INTEGER;
+        break;
+      }
+      case "bigint": {
+        this.sqlType = Types.BIGINT;
+        break;
+      }
+      default:
+        log.warn("Unsupported SQL type '{}' specified for 'userId'. Using default type 'VARCHAR'.", sqlType);
+        this.sqlType = Types.VARCHAR;
+    }
+  }
 
   @Override
   public int[] sqlTypes() {
-    return new int[] { Types.VARCHAR };
+    return new int[]{sqlType};
   }
 
   @Override
@@ -51,8 +80,14 @@ public class UserIdType implements UserType {
       throws HibernateException, SQLException {
     if (value == null) {
       st.setNull(index, Types.OTHER);
+    } else if (this.sqlType == Types.VARCHAR) {
+      st.setString(index, value.toString());
+    } else if (this.sqlType == Types.INTEGER) {
+      st.setObject(index, Integer.parseInt(value.toString()));
+    } else if (this.sqlType == Types.BIGINT) {
+      st.setObject(index, Long.parseLong(value.toString()));
     } else {
-      st.setObject(index, ((UserId) value).getValue());
+      st.setObject(index, ((UserId) value).getValue(), this.sqlType);
     }
   }
 

@@ -2,18 +2,22 @@ package digiot.stwrap.infrastructure;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Optional;
 import java.util.Properties;
 
 public class PropertiesLoader {
 
-    private static final String PROPERTIES_FILE = "stwrap.properties";
     private static final Properties properties = new Properties();
 
     static {
-        // プロパティファイルを読み込む
-        try (InputStream input = PropertiesLoader.class.getClassLoader().getResourceAsStream(PROPERTIES_FILE)) {
+        load("stwrap.properties");
+    }
+
+    public static void load(String fileName) {
+        
+        try (InputStream input = PropertiesLoader.class.getClassLoader().getResourceAsStream(fileName)) {
             if (input == null) {
-                throw new IOException("Unable to find " + PROPERTIES_FILE);
+                throw new IOException("Unable to find " + fileName);
             }
             properties.load(input);
         } catch (IOException ex) {
@@ -22,8 +26,15 @@ public class PropertiesLoader {
     }
 
     public static String getProperty(String key) {
-        return properties.getProperty(key);
+        return getSafeProperty(key).get();
     }
 
+    public static Optional<String> getSafeProperty(String key) {
+        return Optional.ofNullable(properties.getProperty(key));
+    }
+
+    public static String getPropertyOrDefault(String key, String defaultValue) {
+        return getSafeProperty(key).orElse(defaultValue);
+    }
 }
 

@@ -26,17 +26,16 @@ public class DefaultStripeLinkedUserRepository implements StripeLinkedUserReposi
 
     @Override
     public <S extends StripeLinkedUser> S save(S entity) {
-        String sql = "MERGE INTO stripe_linked_user KEY (id) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        String sql = "MERGE INTO stripe_linked_user KEY (id) VALUES (?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = dataSource.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, entity.getId());
             stmt.setObject(2, entity.getUserId().getValue());
             stmt.setString(3, entity.getStripeCustomerId());
-            stmt.setBoolean(4, entity.getIsPrimary());
-            stmt.setBoolean(5, entity.getDeleted());
-            stmt.setTimestamp(6, Timestamp.valueOf(entity.getCreatedAt()));
-            stmt.setTimestamp(7, Timestamp.valueOf(entity.getUpdatedAt()));
+            stmt.setBoolean(4, entity.getDeleted());
+            stmt.setTimestamp(5, Timestamp.valueOf(entity.getCreatedAt()));
+            stmt.setTimestamp(6, Timestamp.valueOf(entity.getUpdatedAt()));
             stmt.executeUpdate();
         } catch (SQLException e) {
             throw new RuntimeException("Error in upsert operation for stripe_linked_user", e);
@@ -92,8 +91,8 @@ public class DefaultStripeLinkedUserRepository implements StripeLinkedUserReposi
     }
 
     @Override
-    public Optional<StripeLinkedUser> findPrimaryByUserId(UserId userId) {
-        String sql = "SELECT * FROM stripe_linked_user WHERE user_id = ? AND is_primary = true AND deleted = FALSE ORDER BY updated_at DESC LIMIT 1";
+    public Optional<StripeLinkedUser> findByUserId(UserId userId) {
+        String sql = "SELECT * FROM stripe_linked_user WHERE user_id = ? AND deleted = FALSE";
 
         try (Connection conn = dataSource.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -173,47 +172,6 @@ public class DefaultStripeLinkedUserRepository implements StripeLinkedUserReposi
     }
 
     @Override
-    public List<StripeLinkedUser> findAllLinksByUserId(UserId userId) {
-        List<StripeLinkedUser> links = new ArrayList<>();
-        String sql = "SELECT * FROM stripe_linked_user WHERE user_id = ? AND deleted = FALSE";
-
-        try (Connection conn = dataSource.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setObject(1, userId.getValue());
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    links.add(mapRowToUserStripeLinkEntity(rs));
-                }
-            }
-        } catch (SQLException e) {
-            throw new RuntimeException("Error querying stripe_linked_user", e);
-        }
-
-        return links;
-    }
-
-    @Override
-    public Optional<StripeLinkedUser> findLatestLinkByUserId(UserId userId) {
-        String sql = "SELECT * FROM stripe_linked_user WHERE user_id = ? AND deleted = FALSE ORDER BY updated_at DESC LIMIT 1";
-
-        try (Connection conn = dataSource.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setObject(1, userId.getValue());
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    return Optional.ofNullable(mapRowToUserStripeLinkEntity(rs));
-                }
-            }
-        } catch (SQLException e) {
-            throw new RuntimeException("Error querying stripe_linked_user", e);
-        }
-
-        return Optional.empty();
-    }
-
-    @Override
     public void delete(StripeLinkedUser link) {
         String sql = "UPDATE stripe_linked_user SET deleted = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = ?";
 
@@ -274,15 +232,14 @@ public class DefaultStripeLinkedUserRepository implements StripeLinkedUserReposi
     }
 
     private StripeLinkedUser mapRowToUserStripeLinkEntity(ResultSet rs) throws SQLException {
-        StripeLinkedUser StripeLinkedUser = new StripeLinkedUser();
-        StripeLinkedUser.setId(rs.getString("id"));
-        StripeLinkedUser.setUserId(UserId.valueOf(rs.getObject("user_id")));
-        StripeLinkedUser.setStripeCustomerId(rs.getString("stripe_customer_id"));
-        StripeLinkedUser.setIsPrimary(rs.getBoolean("is_primary"));
-        StripeLinkedUser.setDeleted(rs.getBoolean("deleted"));
-        StripeLinkedUser.setCreatedAt(rs.getTimestamp("created_at").toLocalDateTime());
-        StripeLinkedUser.setUpdatedAt(rs.getTimestamp("updated_at").toLocalDateTime());
-        return StripeLinkedUser;
+        StripeLinkedUser stripeLinkedUser = new StripeLinkedUser();
+        stripeLinkedUser.setId(rs.getString("id"));
+        stripeLinkedUser.setUserId(UserId.valueOf(rs.getObject("user_id")));
+        stripeLinkedUser.setStripeCustomerId(rs.getString("stripe_customer_id"));
+        stripeLinkedUser.setDeleted(rs.getBoolean("deleted"));
+        stripeLinkedUser.setCreatedAt(rs.getTimestamp("created_at").toLocalDateTime());
+        stripeLinkedUser.setUpdatedAt(rs.getTimestamp("updated_at").toLocalDateTime());
+        return stripeLinkedUser;
     }
 }
 
