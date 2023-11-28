@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import com.stripe.exception.StripeException;
 import digiot.stwrap.application.CustomerService;
+import digiot.stwrap.domain.model.StripeLinkedUser;
 import digiot.stwrap.domain.model.StripeSetupIntent;
 import digiot.stwrap.domain.model.UserId;
 import digiot.stwrap.infrastructure.StripeApiKeyInitializer;
@@ -36,15 +37,17 @@ public class StripeSetupIntentRepositoryTest {
   @Test
   public void testFindByStripeLinkedUserId() throws StripeException {
 
-    // Setup test data
     String testUserId = "test-user-id";
+    StripeLinkedUser linkedUser = customerService.getOrCreateStripeLinkedUser(UserId.valueOf(testUserId));
+
+    // Setup test data
     StripeSetupIntent testIntent = new StripeSetupIntent();
     testIntent.setId("test-setup-intent-id");
-    testIntent.setStripeLinkedUser(customerService.getOrCreateStripeLinkedUser(UserId.valueOf(testUserId))); // Assuming there is a setter for this field
+    testIntent.setStripeLinkedUser(linkedUser); // Assuming there is a setter for this field
     stripeSetupIntentRepository.save(testIntent);
 
     // Retrieve setup intents by Stripe linked user ID
-    List<StripeSetupIntent> retrievedIntents = stripeSetupIntentRepository.findByStripeLinkedUserId(testUserId);
+    List<StripeSetupIntent> retrievedIntents = stripeSetupIntentRepository.findByStripeLinkedUserId(linkedUser.getId());
 
     // Assert the retrieved data
     assertThat(retrievedIntents).isNotNull();

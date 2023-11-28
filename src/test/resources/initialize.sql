@@ -2,7 +2,7 @@
 CREATE TABLE IF NOT EXISTS stripe_linked_user
 (
     id                 VARCHAR(32) PRIMARY KEY,
-    user_id            VARCHAR(255),
+    user_id            VARCHAR(255)  PRIMARY KEY,
     stripe_customer_id VARCHAR(255) NOT NULL,
     deleted         BOOLEAN   DEFAULT FALSE,
     created_at         TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -15,7 +15,7 @@ CREATE INDEX IF NOT EXISTS idx_stripe_linked_user_stripe_customer_id ON stripe_l
 -- stripe_payment_intents
 CREATE TABLE IF NOT EXISTS stripe_payment_intents
 (
-    id VARCHAR(255) PRIMARY KEY,
+    id                 VARCHAR(32) PRIMARY KEY,
     stripe_linked_user_id VARCHAR(32),
     status VARCHAR(50),
     amount INT,
@@ -30,7 +30,7 @@ CREATE INDEX IF NOT EXISTS idx_payment_intents_stripe_linked_user_id ON stripe_p
 -- stripe_setup_intents
 CREATE TABLE IF NOT EXISTS stripe_setup_intents
 (
-    id VARCHAR(255) PRIMARY KEY,
+    id                 VARCHAR(32) PRIMARY KEY,
     stripe_linked_user_id VARCHAR(32),
     status VARCHAR(50),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
