@@ -2,11 +2,9 @@ package digiot.stwrap.domain.model;
 
 import lombok.Getter;
 import lombok.Setter;
-import javax.persistence.*;
-
 import org.hibernate.annotations.Type;
 
-import java.time.LocalDateTime;
+import javax.persistence.*;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -26,15 +24,6 @@ public class StripeLinkedUser extends BaseEntity {
 
     @Column(name = "stripe_customer_id", nullable = false)
     private String stripeCustomerId;
-
-    @Column(name = "deleted")
-    private Boolean deleted;
-
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
-
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
 
     @OneToMany(mappedBy = "stripeLinkedUser", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<StripePaymentIntent> paymentIntents = new HashSet<>();

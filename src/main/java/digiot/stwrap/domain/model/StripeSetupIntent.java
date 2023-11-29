@@ -19,4 +19,5 @@ public class StripeSetupIntent extends BaseEntity {
 
     @Column(name = "status")
     private String status;
+
 }

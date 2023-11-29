@@ -1,106 +1,146 @@
-// package digiot.stwrap.application;
+package digiot.stwrap.application;
 
-// import com.stripe.exception.StripeException;
-// import com.stripe.model.Subscription;
-// import com.stripe.param.PaymentMethodCreateParams;
-// import com.stripe.param.SubscriptionCreateParams;
-// import com.stripe.param.SubscriptionUpdateParams;
-// import digiot.stwrap.domain.model.StripeLinkedUser;
-// import digiot.stwrap.domain.model.UserId;
-// import lombok.AllArgsConstructor;
+import com.stripe.exception.StripeException;
+import com.stripe.model.Customer;
+import com.stripe.model.PaymentMethod;
+import com.stripe.model.Subscription;
+import com.stripe.param.PaymentMethodAttachParams;
+import com.stripe.param.SubscriptionCreateParams;
+import com.stripe.param.SubscriptionUpdateParams;
+import digiot.stwrap.domain.LinkedUserSpecification;
+import digiot.stwrap.domain.model.StripeLinkedUser;
+import digiot.stwrap.domain.model.UserId;
+import lombok.AllArgsConstructor;
+import lombok.SneakyThrows;
+import org.springframework.stereotype.Service;
 
-// import java.time.Instant;
-// import java.time.OffsetDateTime;
+import javax.transaction.Transactional;
 
-// @AllArgsConstructor
-// public class SubscriptionService {
+@AllArgsConstructor
+@Service
+@Transactional
+public class SubscriptionService {
 
-//     final CustomerService customerService;
+    private final StripeLinkService stripeLinkService;
 
-//     /**
-//      * Creates a new subscription for a user with the specified plan and a new payment method token.
-//      *
-//      * @param userId   The ID of the user to create the subscription for.
-//      * @param planId   The ID of the subscription plan.
-//      * @param token    The payment method token.
-//      * @param quantity The quantity of the subscription, typically 1.
-//      * @return Subscription The created Stripe Subscription object.
-//      * @throws StripeException If there is an issue with the Stripe API call.
-//      */
-//     public Subscription createSubscriptionWithToken(UserId userId, String planId, String token, long quantity) throws StripeException {
-//         String paymentMethodId = customerService.attachPaymentMethodToCustomerFromToken(userId, token, PaymentMethodCreateParams.Type.CARD, false).getId();
-//         return createSubscriptionWithPaymentMethodId(userId, planId, paymentMethodId, quantity);
-//     }
+    /**
+     * Creates a new subscription in Stripe.
+     *
+     * @param userId          The unique identifier of the user for whom the subscription is being created.
+     * @param planId       The ID of the product/plan to which the user is subscribing.
+     * @param paymentMethodId The ID of the payment method to be used for the subscription.
+     * @return The created Subscription object.
+     */
+    @SneakyThrows(StripeException.class)
+    public Subscription createSubscription(UserId userId, String planId, String paymentMethodId) {
 
-//     /**
-//      * Creates a new subscription for a user in Stripe using an existing payment method ID.
-//      *
-//      * @param userId          The user ID from the client's system.
-//      * @param planId          The ID of the subscription plan in Stripe.
-//      * @param paymentMethodId The ID of the payment method to be used for the subscription.
-//      * @param quantity        The quantity of the subscription, typically 1.
-//      * @return Subscription    The Stripe Subscription object that was created.
-//      * @throws StripeException If there is an issue communicating with the Stripe API.
-//      */
-//     public Subscription createSubscriptionWithPaymentMethodId(UserId userId, String planId, String paymentMethodId, long quantity) throws StripeException {
+        // Retrieves or creates a Stripe-linked user based on the provided userId.
+        StripeLinkedUser linkedUser = stripeLinkService.getOrCreateStripeLinkedUser(userId);
 
-//         StripeLinkedUser linkedUser = customerService.getOrCreateStripeLinkedUser(userId);
+        // Retrieves the Stripe Customer object using the Stripe Customer ID from the linked user.
+        Customer customer = Customer.retrieve(linkedUser.getStripeCustomerId());
 
-//         customerService.attachPaymentMethodToCustomer(linkedUser.getUserId(), paymentMethodId);
+        // Configures the subscription parameters.
+        SubscriptionCreateParams params = SubscriptionCreateParams.builder()
+                .addItem(SubscriptionCreateParams.Item.builder()
+                        .setPlan(planId) // Sets the plan (product) for the subscription.
+                        .build())
+                .setCustomer(customer.getId()) // Associates the subscription with the retrieved Stripe Customer.
+                .setDefaultPaymentMethod(paymentMethodId) // Sets the default payment method for the subscription.
+                .build();
 
-//         SubscriptionCreateParams subscriptionParams = SubscriptionCreateParams.builder()
-//                 .setCustomer(linkedUser.getStripeCustomerId())
-//                 .setDefaultPaymentMethod(paymentMethodId)
-//                 .addItem(SubscriptionCreateParams.Item.builder().setPlan(planId).setQuantity(quantity).build())
-//                 .build();
+        // Creates a new subscription in Stripe with the specified parameters.
+        return Subscription.create(params);
+    }
 
+    /**
+     * Update the payment method for a Stripe subscription for a given user.
+     *
+     * @param userId             The ID of the user whose subscription's payment method is to be updated.
+     * @param subscriptionId     The ID of the subscription to update.
+     * @param newPaymentMethodId The ID of the new payment method to set as the default.
+     * @return The updated Subscription object.
+     */
+    @SneakyThrows(StripeException.class)
+    public Subscription updateSubscriptionPaymentMethod(UserId userId, String subscriptionId, String newPaymentMethodId) {
 
-//         return Subscription.create(subscriptionParams);
-//     }
+        // Retrieves or creates a Stripe linked user.
+        StripeLinkedUser linkedUser = stripeLinkService.getOrCreateStripeLinkedUser(userId);
 
-//     /**
-//      * Applies a coupon code to an existing subscription in Stripe.
-//      *
-//      * @param subscriptionId The ID of the existing subscription in Stripe.
-//      * @param couponCode     The coupon code to apply to the subscription.
-//      * @return Subscription  The updated Stripe Subscription object.
-//      * @throws StripeException If there is an issue communicating with the Stripe API.
-//      */
-//     public Subscription applyCouponToSubscription(String subscriptionId, String couponCode) throws StripeException {
-//         Subscription subscription = Subscription.retrieve(subscriptionId);
-//         SubscriptionUpdateParams params = SubscriptionUpdateParams.builder().setCoupon(couponCode).build();
-//         return subscription.update(params);
-//     }
+        // Retrieves the subscription based on the provided ID.
+        Subscription subscription = Subscription.retrieve(subscriptionId);
 
-//     /**
-//      * Cancels an existing subscription in Stripe at a specified date.
-//      *
-//      * @param subscriptionId The ID of the subscription to cancel.
-//      * @param cancelAt       The date at which the subscription should be cancelled.
-//      * @return Subscription  The updated Stripe Subscription object.
-//      * @throws StripeException If there is an issue communicating with the Stripe API.
-//      */
-//     public Subscription cancelSubscriptionAtDate(String subscriptionId, OffsetDateTime cancelAt) throws StripeException {
+        // Verifies if the subscription belongs to the retrieved customer.
+        LinkedUserSpecification.verifyUserAssociation(linkedUser, subscription);
 
-//         Instant instantCancelAt = cancelAt.toInstant();
+        // Attach the new payment method to the customer.
+        Customer customer = Customer.retrieve(linkedUser.getStripeCustomerId());
+        PaymentMethodAttachParams attachParams = PaymentMethodAttachParams.builder()
+                .setCustomer(customer.getId())
+                .build();
+        PaymentMethod.retrieve(newPaymentMethodId).attach(attachParams);
 
-//         Subscription subscription = Subscription.retrieve(subscriptionId);
-//         SubscriptionUpdateParams params = SubscriptionUpdateParams.builder()
-//                 .setCancelAt(instantCancelAt.getEpochSecond()).build();
+        // Update the subscription with the new default payment method.
+        SubscriptionUpdateParams params = SubscriptionUpdateParams.builder()
+                .setDefaultPaymentMethod(newPaymentMethodId)
+                .build();
 
-//         return subscription.update(params);
-//     }
+        // Update the subscription and return the updated object.
+        return subscription.update(params);
+    }
 
-//     /**
-//      * Schedules a subscription for cancellation at the end of the current billing period in Stripe.
-//      *
-//      * @param subscriptionId The ID of the subscription to cancel.
-//      * @return Subscription  The updated Stripe Subscription object.
-//      * @throws StripeException If there is an issue communicating with the Stripe API.
-//      */
-//     public Subscription cancelSubscriptionAtPeriodEnd(String subscriptionId) throws StripeException {
-//         Subscription subscription = Subscription.retrieve(subscriptionId);
-//         SubscriptionUpdateParams params = SubscriptionUpdateParams.builder().setCancelAtPeriodEnd(true).build();
-//         return subscription.update(params);
-//     }
-// }
+    /**
+     * Cancels a Stripe subscription for a given user.
+     *
+     * @param userId         The ID of the user whose subscription is to be canceled.
+     * @param subscriptionId The ID of the subscription to cancel.
+     * @return The canceled Subscription object.
+     */
+    @SneakyThrows(StripeException.class)
+    public Subscription cancelSubscription(UserId userId, String subscriptionId) {
+
+        // Retrieves or creates a Stripe linked user.
+        StripeLinkedUser linkedUser = stripeLinkService.getOrCreateStripeLinkedUser(userId);
+
+        // Retrieves Stripe customer information.
+        Customer customer = Customer.retrieve(linkedUser.getStripeCustomerId());
+
+        // Retrieves the subscription based on the provided ID.
+        Subscription subscription = Subscription.retrieve(subscriptionId);
+
+        // Verifies if the subscription belongs to the retrieved customer.
+        LinkedUserSpecification.verifyUserAssociation(linkedUser, subscription);
+
+        // Cancels the subscription.
+        return subscription.cancel();
+    }
+
+    /**
+     * Applies a coupon to a Stripe subscription for a given user.
+     *
+     * @param userId         The ID of the user whose subscription will receive the coupon.
+     * @param subscriptionId The ID of the subscription to which the coupon is applied.
+     * @param couponCode     The coupon code to apply to the subscription.
+     * @return The updated Subscription object.
+     */
+    @SneakyThrows(StripeException.class)
+    public Subscription applyCoupon(UserId userId, String subscriptionId, String couponCode) {
+
+        // Retrieves or creates a Stripe linked user.
+        StripeLinkedUser linkedUser = stripeLinkService.getOrCreateStripeLinkedUser(userId);
+
+        // Retrieves the subscription based on the provided ID.
+        Subscription subscription = Subscription.retrieve(subscriptionId);
+
+        // Verifies if the subscription belongs to the retrieved customer.
+        LinkedUserSpecification.verifyUserAssociation(linkedUser, subscription);
+
+        // Creates parameters for updating the subscription with the coupon.
+        SubscriptionUpdateParams params = SubscriptionUpdateParams.builder()
+                .setCoupon(couponCode)
+                .build();
+
+        // Applies the coupon to the subscription and returns the updated object.
+        return subscription.update(params);
+    }
+}
