@@ -5,6 +5,7 @@ import com.stripe.model.Customer;
 import com.stripe.model.PaymentMethod;
 import com.stripe.model.PaymentMethodCollection;
 import com.stripe.model.SetupIntent;
+import com.stripe.param.PaymentMethodAttachParams;
 import com.stripe.param.PaymentMethodListParams;
 import com.stripe.param.SetupIntentCreateParams;
 import digiot.stwrap.domain.LinkedUserSpecification;
@@ -132,7 +133,17 @@ public class PaymentMethodService {
 
         return setupIntent;
     }
-
+    
+    /**
+     * Retrieves a list of all registered payment methods for a given user's Stripe account.
+     *
+     * This method lists all payment methods of type 'CARD' associated with the user's Stripe account.
+     * It's useful for displaying available credit cards or for operations that require selecting from existing cards.
+     *
+     * @param userId The unique identifier of the user whose payment methods are to be listed.
+     * @return A list of PaymentMethod objects representing the user's registered credit cards.
+     * @throws StripeException If an error occurs during communication with the Stripe API.
+     */
     public List<PaymentMethod> listPaymentMethods(UserId userId) throws StripeException {
 
         StripeLinkedUser linkedUser = stripeLinkService.getOrCreateStripeLinkedUser(userId);
@@ -149,19 +160,23 @@ public class PaymentMethodService {
     }
 
     /**
-     * 新しい支払い方法を追加する
+     * Adds a new payment method to the user's Stripe account.
+     *
+     * @param userId                The ID of the user for whom to add the payment method.
+     * @param newPaymentMethodId    The ID of the new payment method to be added.
+     * @return The added PaymentMethod object.
+     * @throws StripeException      If an error occurs with the Stripe API call.
      */
-    public PaymentMethod addPaymentMethod(UserId userId, String paymentMethodId, String newPaymentMethodDetails) {
-        // 新しい支払い方法の追加
-        return null;
-    }
+    public PaymentMethod addPaymentMethod(UserId userId, String newPaymentMethodId) throws StripeException {
+        StripeLinkedUser linkedUser = stripeLinkService.getOrCreateStripeLinkedUser(userId);
+        Customer customer = Customer.retrieve(linkedUser.getStripeCustomerId());
 
-    /**
-     * 既存の支払い方法を更新する
-     */
-    public PaymentMethod updatePaymentMethod(UserId userId, String paymentMethodId, String newPaymentMethodDetails) {
-        // 既存の支払い方法の更新
-        return null;
+        PaymentMethod paymentMethod = PaymentMethod.retrieve(newPaymentMethodId);
+        paymentMethod = paymentMethod.attach(PaymentMethodAttachParams.builder()
+                .setCustomer(customer.getId())
+                .build());
+
+        return paymentMethod;
     }
 }
 

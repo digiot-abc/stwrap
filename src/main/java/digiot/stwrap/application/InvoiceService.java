@@ -9,7 +9,7 @@ import lombok.AllArgsConstructor;
 @AllArgsConstructor
 public class InvoiceService {
 
-    final CustomerService customerService;
+    final StripeLinkService linkService;
 
     /**
      * Retrieves the next upcoming invoice for a given customer.
@@ -21,7 +21,7 @@ public class InvoiceService {
     public Invoice getNextInvoice(UserId userId) throws StripeException {
 
         // Retrieve the Stripe customer ID for the given user ID.
-        String customerId = customerService.getOrCreateStripeLinkedUser(userId).getStripeCustomerId();
+        String customerId = linkService.getOrCreateStripeLinkedUser(userId).getStripeCustomerId();
 
         InvoiceUpcomingParams invoiceParams = InvoiceUpcomingParams.builder()
                 .setCustomer(customerId)

@@ -102,9 +102,6 @@ public class SubscriptionService {
         // Retrieves or creates a Stripe linked user.
         StripeLinkedUser linkedUser = stripeLinkService.getOrCreateStripeLinkedUser(userId);
 
-        // Retrieves Stripe customer information.
-        Customer customer = Customer.retrieve(linkedUser.getStripeCustomerId());
-
         // Retrieves the subscription based on the provided ID.
         Subscription subscription = Subscription.retrieve(subscriptionId);
 

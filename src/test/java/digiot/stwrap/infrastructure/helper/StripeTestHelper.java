@@ -13,11 +13,11 @@ import java.util.Map;
 
 public class StripeTestHelper {
 
-    private static final List<Customer> createdCustomers = new ArrayList<>();
-    private static final List<Product> createdProducts = new ArrayList<>();
-    private static final List<Subscription> createdSubscriptions = new ArrayList<>();
     private static final List<Plan> createdPlans = new ArrayList<>();
     private static final List<Coupon> createdCoupons = new ArrayList<>();
+    private static final List<Product> createdProducts = new ArrayList<>();
+    private static final List<Customer> createdCustomers = new ArrayList<>();
+    private static final List<Subscription> createdSubscriptions = new ArrayList<>();
     private static final List<PaymentMethod> createdPaymentMethods = new ArrayList<>();
 
     public static PaymentMethod createPaymentMethod() throws StripeException {
